@@ -140,10 +140,21 @@ export async function POST(
     if (allTermsPaid && newRemainingAmount <= 0.01) { // Allow small floating point differences
       newStatus = "PAID"
     } else {
-      // If not all terms are paid, status should be ACTIVE (unless overdue)
-      // Check if loan is overdue
-      const isOverdue = new Date() > new Date(loan.dueDate)
-      newStatus = isOverdue ? "OVERDUE" : "ACTIVE"
+      // If not all terms are paid, check if there are any unpaid terms that are overdue
+      // Only PENDING or OVERDUE terms that are past due should make loan overdue
+      // PAID terms should never be considered overdue
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const hasOverdueTerms = updatedTerms.some((t: any) => {
+        // Only check terms that are not PAID
+        if (t.status === "PAID") return false
+        
+        const termDueDate = new Date(t.dueDate)
+        termDueDate.setHours(0, 0, 0, 0)
+        // Term is overdue if it's unpaid (PENDING or OVERDUE) and past due date
+        return termDueDate < today
+      })
+      newStatus = hasOverdueTerms ? "OVERDUE" : "ACTIVE"
     }
     
     // Store user info before update for SMS

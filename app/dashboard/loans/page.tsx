@@ -144,12 +144,36 @@ export default function LoansPage() {
             // Status says PAID but terms don't match - show ACTIVE instead
             displayStatus = "ACTIVE"
           }
+          
+          // Check if there are any unpaid terms that are overdue
+          // Only PENDING or OVERDUE terms that are past due should make loan overdue
+          // PAID terms should never be considered overdue
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const hasOverdueTerms = row.terms.some((t: any) => {
+            // Only check terms that are not PAID
+            if (t.status === "PAID") return false
+            
+            const termDueDate = new Date(t.dueDate)
+            termDueDate.setHours(0, 0, 0, 0)
+            // Term is overdue if it's unpaid (PENDING or OVERDUE) and past due date
+            return termDueDate < today
+          })
+          
+          if (hasOverdueTerms && displayStatus === "ACTIVE") {
+            displayStatus = "OVERDUE"
+          }
+        } else {
+          // Fallback to loan dueDate if no terms available
+          const daysUntilDue = Math.ceil(
+            (new Date(row.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+          )
+          if (daysUntilDue < 0 && displayStatus === "ACTIVE") {
+            displayStatus = "OVERDUE"
+          }
         }
         
-        const daysUntilDue = Math.ceil(
-          (new Date(row.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-        )
-        const isOverdue = daysUntilDue < 0 && displayStatus === "ACTIVE"
+        const isOverdue = displayStatus === "OVERDUE"
         
         return (
           <span className={`px-2 py-1 rounded text-xs font-medium ${

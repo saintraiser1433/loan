@@ -83,18 +83,39 @@ export async function GET(request: Request) {
       }
     }
 
-    // 2. Update loan status to OVERDUE for loans past due date
-    await prisma.loan.updateMany({
+    // 2. Update loan status to OVERDUE for loans with unpaid terms past due date
+    // First, find all loans with unpaid terms (PENDING or OVERDUE) that are overdue
+    // PAID terms should never make a loan overdue
+    const loansWithOverdueTerms = await prisma.loan.findMany({
       where: {
         status: { in: ["ACTIVE"] },
-        dueDate: {
-          lt: today, // Past due date
+        terms: {
+          some: {
+            status: { in: ["PENDING", "OVERDUE"] }, // Only check unpaid terms
+            dueDate: {
+              lt: today, // Past due date
+            },
+          },
         },
       },
-      data: {
-        status: "OVERDUE",
+      select: {
+        id: true,
       },
     })
+
+    // Update only loans that have unpaid overdue terms
+    if (loansWithOverdueTerms.length > 0) {
+      await prisma.loan.updateMany({
+        where: {
+          id: {
+            in: loansWithOverdueTerms.map((l) => l.id),
+          },
+        },
+        data: {
+          status: "OVERDUE",
+        },
+      })
+    }
 
     // 3. Send notifications for overdue payment terms
     const overdueTerms = await (prisma as any).loanTerm.findMany({

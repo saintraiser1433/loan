@@ -116,34 +116,44 @@ export async function POST(request: Request) {
       }
     }
 
-    // Check if due date has passed and update loan status
-    if (new Date() > loan.dueDate && loan.status !== "PAID") {
-      await prisma.loan.update({
-        where: { id: loanId },
-        data: { status: "OVERDUE" }
-      })
-    }
-
-    // Update term with penalty info if late
-    if (termId && daysLate > 0 && penaltyAmount > 0) {
-      await (prisma as any).loanTerm.update({
-        where: { id: termId },
-        data: {
-          daysLate: daysLate,
-          penaltyAmount: penaltyAmount,
-          status: "OVERDUE"
-        }
-      })
+    // Update term with penalty info if late (but keep status as PENDING until payment is approved)
+    if (termId) {
+      const termDueDate = new Date(termToUpdate.dueDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      termDueDate.setHours(0, 0, 0, 0)
       
-      // Update loan total amount and remaining amount to include penalty
-      await prisma.loan.update({
-        where: { id: loanId },
-        data: {
-          totalAmount: loan.totalAmount + penaltyAmount,
-          remainingAmount: loan.remainingAmount + penaltyAmount,
-          status: "OVERDUE"
-        }
-      })
+      const calculatedDaysLate = Math.max(0, Math.ceil((today.getTime() - termDueDate.getTime()) / (1000 * 60 * 60 * 24)))
+      const penaltyPerDay = (loan.loanType as any)?.latePaymentPenaltyPerDay || 0
+      const calculatedPenalty = calculatedDaysLate * penaltyPerDay
+      
+      // Use provided penalty or calculated penalty
+      const effectivePenalty = penaltyAmount || calculatedPenalty
+      
+      // Only update penalty info if there's a penalty, but keep status as PENDING
+      // The term status will be updated to PAID when payment is approved
+      if (effectivePenalty > 0) {
+        await (prisma as any).loanTerm.update({
+          where: { id: termId },
+          data: {
+            daysLate: calculatedDaysLate,
+            penaltyAmount: effectivePenalty,
+            // Keep status as PENDING - it will be updated to PAID when payment is approved
+          }
+        })
+        
+        // Update loan total amount and remaining amount to include penalty
+        await prisma.loan.update({
+          where: { id: loanId },
+          data: {
+            totalAmount: loan.totalAmount + effectivePenalty,
+            remainingAmount: loan.remainingAmount + effectivePenalty,
+          }
+        })
+      }
+      
+      // Loan status will be recalculated based on unpaid terms when payment is approved
+      // Don't mark as overdue here - let the approval logic handle it
     }
 
     // Create payment with PENDING status - requires admin approval

@@ -234,13 +234,43 @@ async function main() {
     }
   })
 
+  const borrower6 = await prisma.user.upsert({
+    where: { email: 'borrower6@example.com' },
+    update: {},
+    create: {
+      email: 'borrower6@example.com',
+      password: hashedPassword,
+      name: 'Liza Fernandez',
+      role: 'BORROWER',
+      phone: '+63 912 345 6796',
+      status: 'APPROVED',
+      creditScore: 88.5,
+      loanLimit: 120000
+    }
+  })
+
+  const borrower7 = await prisma.user.upsert({
+    where: { email: 'borrower7@example.com' },
+    update: {},
+    create: {
+      email: 'borrower7@example.com',
+      password: hashedPassword,
+      name: 'Roberto Martinez',
+      role: 'BORROWER',
+      phone: '+63 912 345 6797',
+      status: 'APPROVED',
+      creditScore: 70.0,
+      loanLimit: 40000
+    }
+  })
+
   // Create contact persons
   console.log('Creating contact persons...')
   // Delete existing contact persons for these users first
   await prisma.contactPerson.deleteMany({
     where: {
       userId: {
-        in: [borrower1.id, borrower2.id, borrower3.id, borrower4.id, borrower5.id]
+        in: [borrower1.id, borrower2.id, borrower3.id, borrower4.id, borrower5.id, borrower6.id, borrower7.id]
       }
     }
   })
@@ -316,6 +346,30 @@ async function main() {
         name: 'Sofia Garcia',
         relationship: 'Sister',
         phone: '+63 912 345 6809'
+      }
+    }),
+    prisma.contactPerson.create({
+      data: {
+        userId: borrower4.id,
+        name: 'Miguel Rodriguez',
+        relationship: 'Husband',
+        phone: '+63 912 345 6810'
+      }
+    }),
+    prisma.contactPerson.create({
+      data: {
+        userId: borrower6.id,
+        name: 'Antonio Fernandez',
+        relationship: 'Father',
+        phone: '+63 912 345 6811'
+      }
+    }),
+    prisma.contactPerson.create({
+      data: {
+        userId: borrower7.id,
+        name: 'Carmen Martinez',
+        relationship: 'Wife',
+        phone: '+63 912 345 6812'
       }
     }),
   ])
@@ -433,6 +487,48 @@ async function main() {
     }
   })
 
+  const application6 = await prisma.loanApplication.create({
+    data: {
+      userId: borrower6.id,
+      loanTypeId: loanTypes[1].id, // Salary Loan
+      purposeId: purposes[5].id, // Home Improvement
+      paymentDurationId: durations[3].id, // 6 months
+      salary: 55000,
+      sourceOfIncome: 'Employment',
+      maritalStatus: 'MARRIED',
+      primaryIdUrl: '/uploads/placeholder-id.jpg',
+      secondaryId1Url: '/uploads/placeholder-id2.jpg',
+      secondaryId2Url: '/uploads/placeholder-id3.jpg',
+      selfieWithIdUrl: '/uploads/placeholder-selfie.jpg',
+      requestedAmount: 70000,
+      purposeDescription: 'Home renovation project',
+      status: 'APPROVED',
+      creditScore: 88.5,
+      loanLimit: 120000,
+      evaluatedBy: loanOfficer.id,
+      evaluatedAt: new Date()
+    }
+  })
+
+  const application7 = await prisma.loanApplication.create({
+    data: {
+      userId: borrower7.id,
+      loanTypeId: loanTypes[2].id, // Quick Cash
+      purposeId: purposes[6].id, // Vehicle
+      paymentDurationId: durations[1].id, // 30 days
+      salary: 32000,
+      sourceOfIncome: 'Employment',
+      maritalStatus: 'MARRIED',
+      primaryIdUrl: '/uploads/placeholder-id.jpg',
+      secondaryId1Url: '/uploads/placeholder-id2.jpg',
+      secondaryId2Url: '/uploads/placeholder-id3.jpg',
+      selfieWithIdUrl: '/uploads/placeholder-selfie.jpg',
+      requestedAmount: 20000,
+      purposeDescription: 'Motorcycle repair',
+      status: 'PENDING'
+    }
+  })
+
   // Create loans
   console.log('Creating loans...')
   const dueDate1 = new Date()
@@ -495,64 +591,378 @@ async function main() {
     }
   })
 
+  const dueDate5 = new Date()
+  dueDate5.setMonth(dueDate5.getMonth() + 6) // 6 months from now
+
+  const loan4 = await prisma.loan.create({
+    data: {
+      applicationId: application6.id,
+      userId: borrower6.id,
+      loanTypeId: loanTypes[1].id,
+      paymentDurationId: durations[3].id,
+      principalAmount: 70000,
+      interestRate: 10.0,
+      totalAmount: 73500, // 70000 + (70000 * 0.10 * 6/12)
+      amountPaid: 24500,
+      remainingAmount: 49000,
+      dueDate: dueDate5,
+      status: 'ACTIVE'
+    }
+  })
+
+  // Create payment methods
+  console.log('Creating payment methods...')
+  const paymentMethods = await Promise.all([
+    prisma.paymentMethod.upsert({
+      where: { name: 'GCash' },
+      update: {},
+      create: {
+        name: 'GCash',
+        accountNumber: '09123456789',
+        accountName: 'Glan Credible and Capital Inc.',
+        isActive: true
+      }
+    }),
+    prisma.paymentMethod.upsert({
+      where: { name: 'PayMaya' },
+      update: {},
+      create: {
+        name: 'PayMaya',
+        accountNumber: '09123456790',
+        accountName: 'Glan Credible and Capital Inc.',
+        isActive: true
+      }
+    }),
+    prisma.paymentMethod.upsert({
+      where: { name: 'Bank Transfer - BDO' },
+      update: {},
+      create: {
+        name: 'Bank Transfer - BDO',
+        accountNumber: '1234567890',
+        accountName: 'Glan Credible and Capital Inc.',
+        isActive: true
+      }
+    }),
+    prisma.paymentMethod.upsert({
+      where: { name: 'Bank Transfer - BPI' },
+      update: {},
+      create: {
+        name: 'Bank Transfer - BPI',
+        accountNumber: '0987654321',
+        accountName: 'Glan Credible and Capital Inc.',
+        isActive: true
+      }
+    }),
+    prisma.paymentMethod.upsert({
+      where: { name: 'Cash' },
+      update: {},
+      create: {
+        name: 'Cash',
+        accountNumber: 'N/A',
+        accountName: 'Glan Credible and Capital Inc. - Main Office',
+        isActive: true
+      }
+    }),
+  ])
+
+  // Create loan terms for each loan
+  console.log('Creating loan terms...')
+  
+  // Loan 1: 3 months, total 25750, already paid 10000
+  const loan1Terms = []
+  const loan1MonthlyAmount = 25750 / 3
+  const loan1StartDate = new Date(loan1.createdAt)
+  for (let i = 1; i <= 3; i++) {
+    const termDueDate = new Date(loan1StartDate)
+    termDueDate.setMonth(termDueDate.getMonth() + i)
+    const termAmount = i === 3 ? 25750 - (loan1MonthlyAmount * 2) : loan1MonthlyAmount
+    
+    let termStatus = 'PENDING'
+    let amountPaid = 0
+    let paidAt = null
+    
+    // First term is partially paid (5000 + 5000 = 10000, but term amount is ~8583)
+    if (i === 1) {
+      amountPaid = Math.min(10000, termAmount)
+      termStatus = amountPaid >= termAmount ? 'PAID' : 'PENDING'
+      if (termStatus === 'PAID') paidAt = new Date()
+    }
+    
+    loan1Terms.push({
+      loanId: loan1.id,
+      termNumber: i,
+      amount: Math.round(termAmount * 100) / 100,
+      dueDate: termDueDate,
+      amountPaid: Math.round(amountPaid * 100) / 100,
+      status: termStatus,
+      paidAt: paidAt
+    })
+  }
+  
+  // Loan 2: 6 months, fully paid
+  const loan2Terms = []
+  const loan2MonthlyAmount = 63000 / 6
+  const loan2StartDate = new Date(loan2.createdAt)
+  for (let i = 1; i <= 6; i++) {
+    const termDueDate = new Date(loan2StartDate)
+    termDueDate.setMonth(termDueDate.getMonth() + i)
+    const termAmount = i === 6 ? 63000 - (loan2MonthlyAmount * 5) : loan2MonthlyAmount
+    
+    loan2Terms.push({
+      loanId: loan2.id,
+      termNumber: i,
+      amount: Math.round(termAmount * 100) / 100,
+      dueDate: termDueDate,
+      amountPaid: Math.round(termAmount * 100) / 100,
+      status: 'PAID',
+      paidAt: new Date(loan2.createdAt.getTime() + i * 24 * 60 * 60 * 1000) // Staggered payment dates
+    })
+  }
+  
+  // Loan 4: 6 months, active, partially paid
+  const loan4Terms = []
+  const loan4MonthlyAmount = 73500 / 6
+  const loan4StartDate = new Date(loan4.createdAt)
+  for (let i = 1; i <= 6; i++) {
+    const termDueDate = new Date(loan4StartDate)
+    termDueDate.setMonth(termDueDate.getMonth() + i)
+    const termAmount = i === 6 ? 73500 - (loan4MonthlyAmount * 5) : loan4MonthlyAmount
+    
+    let termStatus = 'PENDING'
+    let amountPaid = 0
+    let paidAt = null
+    
+    // First term is partially paid (24500)
+    if (i === 1) {
+      amountPaid = Math.min(24500, termAmount)
+      termStatus = amountPaid >= termAmount ? 'PAID' : 'PENDING'
+      if (termStatus === 'PAID') paidAt = new Date()
+    }
+    
+    loan4Terms.push({
+      loanId: loan4.id,
+      termNumber: i,
+      amount: Math.round(termAmount * 100) / 100,
+      dueDate: termDueDate,
+      amountPaid: Math.round(amountPaid * 100) / 100,
+      status: termStatus,
+      paidAt: paidAt
+    })
+  }
+
+  // Loan 3: 12 months, overdue, partially paid
+  const loan3Terms = []
+  const loan3MonthlyAmount = 86800 / 12
+  const loan3StartDate = new Date(loan3.createdAt)
+  for (let i = 1; i <= 12; i++) {
+    const termDueDate = new Date(loan3StartDate)
+    termDueDate.setMonth(termDueDate.getMonth() + i)
+    const termAmount = i === 12 ? 86800 - (loan3MonthlyAmount * 11) : loan3MonthlyAmount
+    
+    let termStatus = 'PENDING'
+    let amountPaid = 0
+    let paidAt = null
+    let daysLate = 0
+    let penaltyAmount = 0
+    
+    // First term is partially paid (20000)
+    if (i === 1) {
+      amountPaid = Math.min(20000, termAmount)
+      // Check if overdue
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const dueDateCheck = new Date(termDueDate)
+      dueDateCheck.setHours(0, 0, 0, 0)
+      if (dueDateCheck < today && amountPaid < termAmount) {
+        termStatus = 'OVERDUE'
+        daysLate = Math.ceil((today.getTime() - dueDateCheck.getTime()) / (1000 * 60 * 60 * 24))
+        const penaltyPerDay = (loanTypes[3] as any)?.latePaymentPenaltyPerDay || 0
+        penaltyAmount = daysLate * penaltyPerDay
+      }
+    } else {
+      // Check if other terms are overdue
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const dueDateCheck = new Date(termDueDate)
+      dueDateCheck.setHours(0, 0, 0, 0)
+      if (dueDateCheck < today) {
+        termStatus = 'OVERDUE'
+        daysLate = Math.ceil((today.getTime() - dueDateCheck.getTime()) / (1000 * 60 * 60 * 24))
+        const penaltyPerDay = (loanTypes[3] as any)?.latePaymentPenaltyPerDay || 0
+        penaltyAmount = daysLate * penaltyPerDay
+      }
+    }
+    
+    loan3Terms.push({
+      loanId: loan3.id,
+      termNumber: i,
+      amount: Math.round(termAmount * 100) / 100,
+      dueDate: termDueDate,
+      amountPaid: Math.round(amountPaid * 100) / 100,
+      status: termStatus,
+      paidAt: paidAt,
+      daysLate: daysLate,
+      penaltyAmount: Math.round(penaltyAmount * 100) / 100
+    })
+  }
+  
+  // Delete existing terms for these loans
+  await (prisma as any).loanTerm.deleteMany({
+    where: {
+      loanId: {
+        in: [loan1.id, loan2.id, loan3.id, loan4.id]
+      }
+    }
+  })
+  
+  // Create all terms
+  await (prisma as any).loanTerm.createMany({
+    data: [...loan1Terms, ...loan2Terms, ...loan3Terms, ...loan4Terms]
+  })
+
   // Create payments
   console.log('Creating payments...')
-  await prisma.payment.create({
+  const loan1Term1 = await (prisma as any).loanTerm.findFirst({
+    where: { loanId: loan1.id, termNumber: 1 }
+  })
+  
+  const payment1 = await prisma.payment.create({
     data: {
       loanId: loan1.id,
       userId: borrower1.id,
       amount: 5000,
       paymentType: 'PARTIAL',
       paymentMethod: 'GCash',
+      paymentMethodId: paymentMethods[0].id,
+      termId: loan1Term1?.id,
       receiptUrl: '/uploads/placeholder-receipt.jpg',
-      status: 'COMPLETED'
+      status: 'COMPLETED',
+      approvedBy: loanOfficer.id,
+      approvedAt: new Date()
     }
   })
 
-  await prisma.payment.create({
+  const payment2 = await prisma.payment.create({
     data: {
       loanId: loan1.id,
       userId: borrower1.id,
       amount: 5000,
       paymentType: 'PARTIAL',
       paymentMethod: 'Bank Transfer',
+      paymentMethodId: paymentMethods[2].id,
+      termId: loan1Term1?.id,
       receiptUrl: '/uploads/placeholder-receipt2.jpg',
-      status: 'COMPLETED'
+      status: 'COMPLETED',
+      approvedBy: loanOfficer.id,
+      approvedAt: new Date()
     }
   })
 
-  await prisma.payment.create({
+  const loan1Term2 = await (prisma as any).loanTerm.findFirst({
+    where: { loanId: loan1.id, termNumber: 2 }
+  })
+
+  const payment3 = await prisma.payment.create({
     data: {
       loanId: loan1.id,
       userId: borrower1.id,
       amount: 5000,
       paymentType: 'PARTIAL',
       paymentMethod: 'PayMaya',
+      paymentMethodId: paymentMethods[1].id,
+      termId: loan1Term2?.id,
       status: 'PENDING'
     }
   })
 
-  await prisma.payment.create({
+  const loan2Term1 = await (prisma as any).loanTerm.findFirst({
+    where: { loanId: loan2.id, termNumber: 1 }
+  })
+
+  const payment4 = await prisma.payment.create({
     data: {
       loanId: loan2.id,
       userId: borrower2.id,
       amount: 63000,
       paymentType: 'FULL',
       paymentMethod: 'Bank Transfer',
+      paymentMethodId: paymentMethods[2].id,
+      termId: loan2Term1?.id,
       receiptUrl: '/uploads/placeholder-receipt3.jpg',
-      status: 'COMPLETED'
+      status: 'COMPLETED',
+      approvedBy: loanOfficer.id,
+      approvedAt: new Date()
     }
   })
 
-  await prisma.payment.create({
+  const loan3Term1 = await (prisma as any).loanTerm.findFirst({
+    where: { loanId: loan3.id, termNumber: 1 }
+  })
+
+  const payment5 = await prisma.payment.create({
     data: {
       loanId: loan3.id,
       userId: borrower4.id,
       amount: 20000,
       paymentType: 'PARTIAL',
       paymentMethod: 'GCash',
+      paymentMethodId: paymentMethods[0].id,
+      termId: loan3Term1?.id,
       receiptUrl: '/uploads/placeholder-receipt4.jpg',
-      status: 'COMPLETED'
+      status: 'COMPLETED',
+      approvedBy: loanOfficer.id,
+      approvedAt: new Date()
+    }
+  })
+
+  const loan4Term1 = await (prisma as any).loanTerm.findFirst({
+    where: { loanId: loan4.id, termNumber: 1 }
+  })
+
+  const payment6 = await prisma.payment.create({
+    data: {
+      loanId: loan4.id,
+      userId: borrower6.id,
+      amount: 12250,
+      paymentType: 'PARTIAL',
+      paymentMethod: 'PayMaya',
+      paymentMethodId: paymentMethods[1].id,
+      termId: loan4Term1?.id,
+      receiptUrl: '/uploads/placeholder-receipt5.jpg',
+      status: 'COMPLETED',
+      approvedBy: loanOfficer.id,
+      approvedAt: new Date()
+    }
+  })
+
+  const payment7 = await prisma.payment.create({
+    data: {
+      loanId: loan4.id,
+      userId: borrower6.id,
+      amount: 12250,
+      paymentType: 'PARTIAL',
+      paymentMethod: 'Bank Transfer - BPI',
+      paymentMethodId: paymentMethods[3].id,
+      termId: loan4Term1?.id,
+      receiptUrl: '/uploads/placeholder-receipt6.jpg',
+      status: 'COMPLETED',
+      approvedBy: loanOfficer.id,
+      approvedAt: new Date()
+    }
+  })
+
+  // Create SMS settings
+  console.log('Creating SMS settings...')
+  // Delete existing SMS settings and create new one
+  await prisma.sMSSettings.deleteMany({})
+  await prisma.sMSSettings.create({
+    data: {
+      mode: 'cloud',
+      cloudServerUrl: 'https://api.sms-gate.app/3rdparty/v1',
+      localServerUrl: null,
+      username: 'demo_user',
+      password: 'demo_password',
+      isActive: false // Set to false by default, user needs to configure
     }
   })
 
@@ -585,22 +995,99 @@ async function main() {
     }
   })
 
-  // Count contact persons
+  // Create activity logs
+  console.log('Creating activity logs...')
+  await Promise.all([
+    prisma.activityLog.create({
+      data: {
+        userId: admin.id,
+        action: 'LOGIN',
+        entityType: 'USER',
+        entityId: admin.id,
+        description: 'Admin user logged in',
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+      }
+    }),
+    prisma.activityLog.create({
+      data: {
+        userId: loanOfficer.id,
+        action: 'APPROVE_APPLICATION',
+        entityType: 'LOAN_APPLICATION',
+        entityId: application1.id,
+        description: `Approved loan application for ${borrower1.name}`,
+        ipAddress: '192.168.1.101',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+      }
+    }),
+    prisma.activityLog.create({
+      data: {
+        userId: loanOfficer.id,
+        action: 'APPROVE_PAYMENT',
+        entityType: 'PAYMENT',
+        entityId: payment1.id,
+        description: `Approved payment of ₱${payment1.amount.toLocaleString()} for loan ${loan1.id}`,
+        ipAddress: '192.168.1.101',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+      }
+    }),
+    prisma.activityLog.create({
+      data: {
+        userId: borrower1.id,
+        action: 'CREATE_PAYMENT',
+        entityType: 'PAYMENT',
+        entityId: payment1.id,
+        description: `Created payment of ₱${payment1.amount.toLocaleString()} for loan ${loan1.id}`,
+        ipAddress: '192.168.1.102',
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)'
+      }
+    }),
+    prisma.activityLog.create({
+      data: {
+        userId: borrower2.id,
+        action: 'CREATE_APPLICATION',
+        entityType: 'LOAN_APPLICATION',
+        entityId: application2.id,
+        description: `Created loan application for ₱${application2.requestedAmount.toLocaleString()}`,
+        ipAddress: '192.168.1.103',
+        userAgent: 'Mozilla/5.0 (Android; Mobile; rv:68.0)'
+      }
+    }),
+    prisma.activityLog.create({
+      data: {
+        userId: loanOfficer.id,
+        action: 'REJECT_APPLICATION',
+        entityType: 'LOAN_APPLICATION',
+        entityId: application5.id,
+        description: `Rejected loan application for ${borrower5.name}`,
+        ipAddress: '192.168.1.101',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+      }
+    }),
+  ])
+
+  // Count records
   const contactPersonCount = await prisma.contactPerson.count()
+  const loanTermCount = await (prisma as any).loanTerm.count()
+  const activityLogCount = await prisma.activityLog.count()
 
   console.log('✅ Seed data created successfully!')
   console.log('\n📋 Summary:')
   console.log(`- ${purposes.length} loan purposes`)
   console.log(`- ${durations.length} payment durations`)
   console.log(`- ${loanTypes.length} loan types`)
+  console.log(`- ${paymentMethods.length} payment methods`)
   console.log('- 1 Admin user (admin@loan.com / admin123)')
   console.log('- 1 Loan Officer (officer@loan.com / password123)')
   console.log('- 5 Borrower users (borrower1-5@example.com / password123)')
   console.log(`- ${contactPersonCount} Contact persons`)
-  console.log('- 5 Loan applications (3 approved, 1 pending, 1 rejected)')
-  console.log('- 3 Loans (1 active, 1 paid, 1 overdue)')
-  console.log('- 5 Payments (3 completed, 1 pending)')
+  console.log('- 7 Loan applications (4 approved, 2 pending, 1 rejected)')
+  console.log('- 4 Loans (2 active, 1 paid, 1 overdue)')
+  console.log(`- ${loanTermCount} Loan terms (with various statuses)`)
+  console.log('- 7 Payments (6 completed, 1 pending)')
+  console.log('- 1 SMS Settings (default configuration)')
   console.log('- 3 SMS logs')
+  console.log(`- ${activityLogCount} Activity logs`)
 }
 
 main()
