@@ -1,0 +1,335 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String            @id @default(cuid())
+  email             String            @unique
+  password          String
+  name              String
+  phone             String?
+  role              UserRole          @default(BORROWER)
+  creditScore       Float             @default(0)
+  loanLimit         Float             @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  approvedAt        DateTime?
+  approvedBy        String?
+  rejectionReason   String?
+  status            BorrowerStatus?   @default(PENDING)
+  isActive          Boolean           @default(true)
+  blockReason       String?
+  termsAccepted     Boolean           @default(false)
+  termsAcceptedAt   DateTime?
+  address           String?
+  dateOfBirth       DateTime?
+  firstName         String?
+  lastName          String?
+  middleName        String?
+  primaryIdUrl      String?
+  secondaryIdUrl    String?
+  selfieWithPrimaryIdUrl    String?
+  selfieWithSecondaryIdUrl  String?
+  barangay          String?
+  block             String?
+  city              String?
+  companyName       String?
+  fathersName       String?
+  lot               String?
+  monthlySalaryMax  Float?
+  monthlySalaryMin  Float?
+  mothersName       String?
+  nationality       String?           @default("Filipino")
+  placeOfBirth      String?
+  position          String?
+  province          String?
+  yearsOfEmployment Float?
+  zipCode           String?
+  contactPersons    ContactPerson[]
+  applications      LoanApplication[]
+  loans             Loan[]
+  payments          Payment[]
+  activityLogs      ActivityLog[]
+
+  @@map("users")
+}
+
+model LoanType {
+  id                        String   @id @default(cuid())
+  name                      String   @unique
+  description               String?
+  minAmount                 Float    @default(0)
+  maxAmount                 Float
+  creditScoreRequired       Float    @default(0)
+  creditScoreOnCompletion   Float    @default(5)
+  limitIncreaseOnCompletion Float    @default(0)
+  latePaymentPenaltyPerDay  Float    @default(0)
+  allowedMonthsToPay        String?
+  interestRatesByMonth      String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  applications              LoanApplication[]
+  loans                     Loan[]
+
+  @@map("loan_types")
+}
+
+model LoanPurpose {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  applications LoanApplication[]
+
+  @@map("loan_purposes")
+}
+
+model PaymentDuration {
+  id           String   @id @default(cuid())
+  label        String   @unique
+  days         Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  applications LoanApplication[]
+  loans        Loan[]
+
+  @@map("payment_durations")
+}
+
+model ContactPerson {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  relationship String
+  phone        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("contact_persons")
+}
+
+model LoanApplication {
+  id                 String            @id @default(cuid())
+  userId             String
+  loanTypeId         String
+  purposeId          String
+  paymentDurationId  String
+  salary             Float
+  sourceOfIncome     String
+  maritalStatus      MaritalStatus
+  payslipUrl         String?
+  billingReceiptUrl  String?
+  primaryIdUrl       String
+  secondaryId1Url    String?
+  secondaryId2Url    String?
+  selfieWithIdUrl    String
+  requestedAmount    Float
+  approvedAmount     Float?
+  purposeDescription String?
+  creditScore        Float?
+  loanLimit          Float?
+  status             ApplicationStatus @default(PENDING)
+  rejectionReason    String?
+  rejectionSmsSent   Boolean           @default(false)
+  evaluatedBy        String?
+  evaluatedAt        DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  loanType           LoanType          @relation(fields: [loanTypeId], references: [id])
+  paymentDuration    PaymentDuration   @relation(fields: [paymentDurationId], references: [id])
+  purpose            LoanPurpose       @relation(fields: [purposeId], references: [id])
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loan               Loan?
+
+  @@map("loan_applications")
+}
+
+model Loan {
+  id                String          @id @default(cuid())
+  applicationId     String          @unique
+  userId            String
+  loanTypeId        String
+  paymentDurationId String
+  principalAmount   Float
+  interestRate      Float
+  totalAmount       Float
+  amountPaid        Float           @default(0)
+  remainingAmount   Float
+  dueDate           DateTime
+  status            LoanStatus      @default(ACTIVE)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  application       LoanApplication @relation(fields: [applicationId], references: [id])
+  loanType          LoanType        @relation(fields: [loanTypeId], references: [id])
+  paymentDuration   PaymentDuration @relation(fields: [paymentDurationId], references: [id])
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments          Payment[]
+  terms             LoanTerm[]
+
+  @@map("loans")
+}
+
+model LoanTerm {
+  id              String   @id @default(cuid())
+  loanId          String
+  termNumber      Int
+  amount          Float
+  dueDate         DateTime
+  amountPaid      Float     @default(0)
+  penaltyAmount   Float     @default(0)
+  daysLate        Int       @default(0)
+  status          TermStatus @default(PENDING)
+  paidAt          DateTime?
+  reminderSmsSent Int       @default(0) // 0 = not sent, 1 = sent
+  overdueSmsSent  Int       @default(0) // 0 = not sent, 1 = sent
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  loan            Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  payments        Payment[]
+
+  @@unique([loanId, termNumber])
+  @@map("loan_terms")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  loanId          String
+  userId          String
+  amount          Float
+  paymentType     PaymentType
+  receiptUrl      String?
+  status          PaymentStatus @default(PENDING)
+  paymentMethod   String?
+  paymentMethodId String?
+  termId          String?
+  approvedBy      String?
+  approvedAt      DateTime?
+  rejectedBy      String?
+  rejectedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  loan            Loan          @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  method          PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  term            LoanTerm?     @relation(fields: [termId], references: [id])
+
+  @@map("payments")
+}
+
+model PaymentMethod {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  accountNumber String
+  accountName   String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  payments      Payment[]
+
+  @@map("payment_methods")
+}
+
+model SMSLog {
+  id        String   @id @default(cuid())
+  userId    String
+  phone     String
+  message   String
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@map("sms_logs")
+}
+
+model SMSSettings {
+  id            String   @id @default(cuid())
+  mode          String   @default("cloud") // "local" or "cloud"
+  localServerUrl String? // e.g., "http://192.168.1.100:8080"
+  cloudServerUrl String  @default("https://api.sms-gate.app/3rdparty/v1")
+  username      String
+  password      String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("sms_settings")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      String
+  entityType  String
+  entityId    String?
+  description String?
+  metadata    String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+enum UserRole {
+  BORROWER
+  LOAN_OFFICER
+  ADMIN
+}
+
+enum BorrowerStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  WIDOWED
+  DIVORCED
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LoanStatus {
+  ACTIVE
+  PAID
+  OVERDUE
+  DEFAULTED
+}
+
+enum TermStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum PaymentType {
+  PARTIAL
+  FULL
+}
+
+
