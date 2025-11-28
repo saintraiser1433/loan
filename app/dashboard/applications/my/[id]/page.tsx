@@ -69,9 +69,9 @@ export default async function MyApplicationDetailPage({
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">Status:</span>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            application.status === "APPROVED" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" :
-            application.status === "REJECTED" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" :
-            "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+            application.status === "APPROVED" ? "bg-gradient-to-r from-green-400 to-green-600 text-white dark:from-green-500 dark:to-green-700" :
+            application.status === "REJECTED" ? "bg-gradient-to-r from-red-400 to-red-600 text-white dark:from-red-500 dark:to-red-700" :
+            "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white dark:from-yellow-500 dark:to-yellow-700"
           }`}>
             {application.status}
           </span>

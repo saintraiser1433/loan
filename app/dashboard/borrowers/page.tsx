@@ -23,6 +23,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { EditBorrowerForm } from "@/components/edit-borrower-form"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { getDiceBearAvatar } from "@/lib/avatar"
 
 interface Borrower {
   id: string
@@ -54,6 +56,7 @@ export default function BorrowersPage() {
   const [rejectionReason, setRejectionReason] = useState("")
   const [blockReason, setBlockReason] = useState("")
   const [blocking, setBlocking] = useState(false)
+  const [activeTab, setActiveTab] = useState<"all" | "approved" | "pending" | "blocked">("all")
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -253,7 +256,45 @@ export default function BorrowersPage() {
     return <DashboardLayout><div>Loading...</div></DashboardLayout>
   }
 
+  // Filter borrowers based on active tab
+  const filteredBorrowers = borrowers.filter((borrower) => {
+    if (activeTab === "approved") {
+      return borrower.status === "APPROVED" && borrower.isActive
+    }
+    if (activeTab === "pending") {
+      return borrower.status === "PENDING" || borrower.status === null
+    }
+    if (activeTab === "blocked") {
+      return !borrower.isActive
+    }
+    return true // "all" tab shows everything
+  })
+
   const columns = [
+    {
+      header: "#",
+      accessor: (row: Borrower, index?: number) => {
+        // Use the index passed from DataTable (accounts for pagination and filtering)
+        // index is 0-based, so add 1 for display
+        const rowNumber = typeof index === 'number' ? index + 1 : (filteredBorrowers.findIndex(b => b.id === row.id) + 1 || 1)
+        return (
+          <div className="text-center font-medium text-muted-foreground">
+            {rowNumber}
+          </div>
+        )
+      },
+    },
+    {
+      header: "Avatar",
+      accessor: (row: Borrower) => (
+        <Avatar className="h-10 w-10">
+          <AvatarImage src={getDiceBearAvatar(row.email || row.name || row.id)} alt={row.name} />
+          <AvatarFallback>
+            {row.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+          </AvatarFallback>
+        </Avatar>
+      ),
+    },
     {
       header: "Name",
       accessor: (row: Borrower) => (
@@ -275,15 +316,15 @@ export default function BorrowersPage() {
         return (
           <div className="flex flex-col gap-1">
             <span className={`px-2 py-1 rounded text-xs font-medium ${
-              status === "APPROVED" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" :
-              status === "REJECTED" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" :
-              "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+              status === "APPROVED" ? "bg-gradient-to-r from-green-400 to-green-600 text-white dark:from-green-500 dark:to-green-700" :
+              status === "REJECTED" ? "bg-gradient-to-r from-red-400 to-red-600 text-white dark:from-red-500 dark:to-red-700" :
+              "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white dark:from-yellow-500 dark:to-yellow-700"
             }`}>
               {status}
             </span>
             {isBlocked && (
               <div className="flex flex-col gap-1">
-                <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                <span className="px-2 py-1 rounded text-xs font-medium bg-gradient-to-r from-gray-500 to-gray-700 text-white dark:from-gray-600 dark:to-gray-800">
                   BLOCKED
                 </span>
                 {row.blockReason && (
@@ -381,8 +422,52 @@ export default function BorrowersPage() {
           </div>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-2 border-b">
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === "all"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            All ({borrowers.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("approved")}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === "approved"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Approved ({borrowers.filter(b => b.status === "APPROVED" && b.isActive).length})
+          </button>
+          <button
+            onClick={() => setActiveTab("pending")}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === "pending"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Pending ({borrowers.filter(b => b.status === "PENDING" || b.status === null).length})
+          </button>
+          <button
+            onClick={() => setActiveTab("blocked")}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === "blocked"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Blocked ({borrowers.filter(b => !b.isActive).length})
+          </button>
+        </div>
+
         <DataTable
-          data={borrowers}
+          data={filteredBorrowers}
           columns={columns}
           searchable={true}
           searchPlaceholder="Search borrowers..."
@@ -668,9 +753,9 @@ export default function BorrowersPage() {
                       <div className="text-sm text-muted-foreground">Status</div>
                       <div>
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          borrowerDetails.status === "APPROVED" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" :
-                          borrowerDetails.status === "REJECTED" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" :
-                          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                          borrowerDetails.status === "APPROVED" ? "bg-gradient-to-r from-green-400 to-green-600 text-white dark:from-green-500 dark:to-green-700" :
+                          borrowerDetails.status === "REJECTED" ? "bg-gradient-to-r from-red-400 to-red-600 text-white dark:from-red-500 dark:to-red-700" :
+                          "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white dark:from-yellow-500 dark:to-yellow-700"
                         }`}>
                           {borrowerDetails.status || "PENDING"}
                         </span>

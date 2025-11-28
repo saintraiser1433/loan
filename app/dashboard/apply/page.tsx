@@ -127,11 +127,11 @@ export default function ApplyPage() {
                 target.style.display = 'none'
                 const parent = target.parentElement
                 if (parent) {
-                  parent.className = "relative w-full h-64 md:h-80 rounded-lg overflow-hidden border bg-gradient-to-br from-primary via-primary/80 to-primary/60"
+                  parent.className = "relative w-full h-64 md:h-80 rounded-lg overflow-hidden border bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700"
                 }
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/50 to-transparent flex items-end">
+            <div className="absolute inset-0 bg-gradient-to-t from-blue-600/90 via-blue-500/50 to-transparent flex items-end">
               <div className="p-6 w-full">
                 <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white">Apply for a Loan</h1>
                 <p className="text-white/90 text-lg">
@@ -197,11 +197,11 @@ export default function ApplyPage() {
               target.style.display = 'none'
               const parent = target.parentElement
               if (parent) {
-                parent.className = "relative w-full h-64 md:h-80 rounded-lg overflow-hidden border bg-gradient-to-br from-primary via-primary/80 to-primary/60"
+                parent.className = "relative w-full h-64 md:h-80 rounded-lg overflow-hidden border bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700"
               }
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/50 to-transparent flex items-end">
+          <div className="absolute inset-0 bg-gradient-to-t from-blue-600/90 via-blue-500/50 to-transparent flex items-end">
             <div className="p-6 w-full">
               <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white">Apply for a Loan</h1>
               <p className="text-white/90 text-lg">
@@ -244,7 +244,7 @@ export default function ApplyPage() {
                       ? !borrowerCredit.canApply || borrowerCredit.availableCredit < loanType.minAmount
                       : false
                   }
-                  className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   title={
                     borrowerCredit && !borrowerCredit.canApply
                       ? restrictionReason

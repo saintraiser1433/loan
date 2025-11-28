@@ -469,11 +469,11 @@ export default function ReportsPage() {
             {/* Export Buttons */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {exportReports.map((report) => (
-                <Card key={report.id} className="hover:border-primary transition-colors">
+                <Card key={report.id} className="hover:border-blue-500 transition-colors">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <report.icon className="h-5 w-5 text-primary" />
+                      <div className="p-2 rounded-lg bg-blue-500/10">
+                        <report.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold">{report.title}</h3>

@@ -220,8 +220,8 @@ export default function PaymentMethodsPage() {
         <span
           className={`px-2 py-1 rounded text-xs font-medium ${
             row.isActive
-              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-              : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+              ? "bg-gradient-to-r from-green-400 to-green-600 text-white dark:from-green-500 dark:to-green-700"
+              : "bg-gradient-to-r from-gray-400 to-gray-600 text-white dark:from-gray-500 dark:to-gray-700"
           }`}
         >
           {row.isActive ? "Active" : "Inactive"}

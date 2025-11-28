@@ -94,15 +94,15 @@ export default function ActivityLogsPage() {
 
   const getActionBadgeColor = (action: string) => {
     if (action.includes("APPROVE") || action.includes("ACTIVATE")) {
-      return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+      return "bg-gradient-to-r from-green-400 to-green-600 text-white dark:from-green-500 dark:to-green-700"
     }
     if (action.includes("REJECT") || action.includes("BLOCK") || action.includes("DELETE")) {
-      return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+      return "bg-gradient-to-r from-red-400 to-red-600 text-white dark:from-red-500 dark:to-red-700"
     }
     if (action.includes("UPDATE") || action.includes("EDIT") || action.includes("CREATE")) {
-      return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+      return "bg-gradient-to-r from-blue-400 to-blue-600 text-white dark:from-blue-500 dark:to-blue-700"
     }
-    return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+    return "bg-gradient-to-r from-gray-400 to-gray-600 text-white dark:from-gray-500 dark:to-gray-700"
   }
 
   if (status === "loading" || loading) {

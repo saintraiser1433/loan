@@ -162,18 +162,22 @@ export function LoanDetailsView({ loan }: LoanDetailsViewProps) {
     const map: Record<string, { label: string; className: string }> = {
       PENDING: {
         label: "Pending",
-        className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+        className: "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white dark:from-yellow-500 dark:to-yellow-700",
       },
       PAID: {
         label: "Paid",
-        className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+        className: "bg-gradient-to-r from-green-400 to-green-600 text-white dark:from-green-500 dark:to-green-700",
       },
       OVERDUE: {
         label: "Overdue",
-        className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+        className: "bg-gradient-to-r from-red-400 to-red-600 text-white dark:from-red-500 dark:to-red-700",
+      },
+      ACTIVE: {
+        label: "Active",
+        className: "bg-gradient-to-r from-blue-400 to-blue-600 text-white dark:from-blue-500 dark:to-blue-700",
       },
     }
-    const config = map[status] ?? { label: status, className: "bg-gray-100 text-gray-800" }
+    const config = map[status] ?? { label: status, className: "bg-gradient-to-r from-gray-400 to-gray-600 text-white" }
     return <Badge className={config.className}>{config.label}</Badge>
   }
 
@@ -181,18 +185,18 @@ export function LoanDetailsView({ loan }: LoanDetailsViewProps) {
     const map: Record<string, { label: string; className: string }> = {
       PENDING: {
         label: "Pending approval",
-        className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+        className: "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white dark:from-yellow-500 dark:to-yellow-700",
       },
       COMPLETED: {
         label: "Approved",
-        className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+        className: "bg-gradient-to-r from-green-400 to-green-600 text-white dark:from-green-500 dark:to-green-700",
       },
       FAILED: {
         label: "Rejected",
-        className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+        className: "bg-gradient-to-r from-red-400 to-red-600 text-white dark:from-red-500 dark:to-red-700",
       },
     }
-    const config = map[status] ?? { label: status, className: "bg-gray-100 text-gray-800" }
+    const config = map[status] ?? { label: status, className: "bg-gradient-to-r from-gray-400 to-gray-600 text-white" }
     return <Badge className={config.className}>{config.label}</Badge>
   }
 

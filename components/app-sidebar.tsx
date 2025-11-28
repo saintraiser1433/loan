@@ -6,6 +6,7 @@ import { Landmark, LayoutDashboard, FileText, CreditCard, Settings, BarChart3, U
 import Link from "next/link"
 
 import { NavUser } from "@/components/nav-user"
+import { getDiceBearAvatar } from "@/lib/avatar"
 import {
   Sidebar,
   SidebarContent,
@@ -47,11 +48,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const userData = session?.user ? {
     name: session.user.name || "User",
     email: session.user.email || "",
-    avatar: "/avatars/default.jpg",
+    avatar: getDiceBearAvatar(session.user.email || session.user.name || "user"),
   } : {
     name: "Guest",
     email: "",
-    avatar: "/avatars/default.jpg",
+    avatar: getDiceBearAvatar("guest"),
   }
 
   return (

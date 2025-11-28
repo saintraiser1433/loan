@@ -14,7 +14,7 @@ import {
 
 interface Column<T> {
   header: string
-  accessor: keyof T | ((row: T) => React.ReactNode)
+  accessor: keyof T | ((row: T, index?: number) => React.ReactNode)
   className?: string
 }
 
@@ -179,7 +179,7 @@ export function DataTable<T extends Record<string, any>>({
                       {columns.map((col, colIndex) => (
                         <td key={colIndex} className={`px-2 py-1.5 text-sm ${col.className ?? ""}`}>
                           {typeof col.accessor === "function"
-                            ? col.accessor(row)
+                            ? col.accessor(row, globalIndex)
                             : String(row[col.accessor] ?? "")}
                         </td>
                       ))}

@@ -146,9 +146,9 @@ export default function MyApplicationsPage() {
       header: "Status",
       accessor: (row: Application) => (
         <span className={`px-2 py-1 rounded text-xs font-medium ${
-          row.status === "APPROVED" ? "bg-green-100 text-green-800" :
-          row.status === "REJECTED" ? "bg-red-100 text-red-800" :
-          "bg-yellow-100 text-yellow-800"
+          row.status === "APPROVED" ? "bg-gradient-to-r from-green-400 to-green-600 text-white" :
+          row.status === "REJECTED" ? "bg-gradient-to-r from-red-400 to-red-600 text-white" :
+          "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white"
         }`}>
           {row.status}
         </span>
