@@ -166,8 +166,8 @@ export default function LoansPage() {
         } else {
           // Fallback to loan dueDate if no terms available
           const daysUntilDue = Math.ceil(
-            (new Date(row.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-          )
+          (new Date(row.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+        )
           if (daysUntilDue < 0 && displayStatus === "ACTIVE") {
             displayStatus = "OVERDUE"
           }

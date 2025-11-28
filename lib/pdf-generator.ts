@@ -139,6 +139,11 @@ export function formatCurrency(amount: number): string {
   return `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+// Format currency for PDF (use PHP instead of peso sign since PDF fonts don't support it well)
+export function formatCurrencyForPDF(amount: number): string {
+  return `PHP ${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
 export function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString("en-PH", {
     year: "numeric",

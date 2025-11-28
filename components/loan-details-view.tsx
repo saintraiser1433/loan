@@ -251,13 +251,27 @@ export function LoanDetailsView({ loan }: LoanDetailsViewProps) {
             {loan.terms && loan.terms.length > 0 ? (
               loan.terms.map((term) => {
                 const termDueDate = new Date(term.dueDate)
+                termDueDate.setHours(0, 0, 0, 0)
                 const monthName = termDueDate.toLocaleDateString("en-US", { month: "long" })
                 const year = termDueDate.getFullYear()
                 const daysUntilDue = Math.ceil(
                   (termDueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
                 )
-                const isOverdue = daysUntilDue < 0
+                // Only show as overdue if term is not PAID and past due date
+                const isOverdue = term.status !== "PAID" && daysUntilDue < 0
                 const amountDue = term.amount - term.amountPaid
+                
+                // Calculate if paid term was paid late
+                let wasPaidLate = false
+                let daysLateWhenPaid = 0
+                if (term.status === "PAID" && term.paidAt) {
+                  const paidDate = new Date(term.paidAt)
+                  paidDate.setHours(0, 0, 0, 0)
+                  if (paidDate > termDueDate) {
+                    wasPaidLate = true
+                    daysLateWhenPaid = Math.ceil((paidDate.getTime() - termDueDate.getTime()) / (1000 * 60 * 60 * 24))
+                  }
+                }
                 const pendingPayments = term.payments.filter((payment) => payment.status === "PENDING")
                 const completedPayments = term.payments.filter((payment) => payment.status === "COMPLETED")
                 const rejectedPayments = term.payments.filter((payment) => payment.status === "FAILED")
@@ -278,7 +292,17 @@ export function LoanDetailsView({ loan }: LoanDetailsViewProps) {
                           </CardTitle>
                           <CardDescription>
                             Due: {termDueDate.toLocaleDateString()}
-                            {isOverdue ? (
+                            {term.status === "PAID" ? (
+                              wasPaidLate ? (
+                                <span className="ml-2 text-orange-600 font-medium">
+                                  (Paid - {daysLateWhenPaid} day{daysLateWhenPaid !== 1 ? 's' : ''} late)
+                                </span>
+                              ) : (
+                                <span className="ml-2 text-green-600 font-medium">
+                                  (Paid on time)
+                                </span>
+                              )
+                            ) : isOverdue ? (
                               <span className="ml-2 text-destructive">
                                 ({Math.abs(daysUntilDue)} days overdue)
                               </span>
@@ -310,29 +334,41 @@ export function LoanDetailsView({ loan }: LoanDetailsViewProps) {
                         </div>
                       </div>
 
-                      {/* Late Fee Display */}
-                      {(term.penaltyAmount > 0 || (isOverdue && term.status !== "PAID")) && (
-                        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 space-y-2">
-                          <div className="flex items-center gap-2 text-destructive">
+                      {/* Late Fee Display - Show for overdue terms or paid terms that were paid late */}
+                      {((term.status !== "PAID" && (term.penaltyAmount > 0 || isOverdue)) || 
+                        (term.status === "PAID" && wasPaidLate && (term.penaltyAmount > 0 || term.daysLate > 0))) && (
+                        <div className={`rounded-lg border p-3 space-y-2 ${
+                          term.status === "PAID" 
+                            ? "border-orange-500/50 bg-orange-50 dark:bg-orange-950/20" 
+                            : "border-destructive/50 bg-destructive/10"
+                        }`}>
+                          <div className={`flex items-center gap-2 ${
+                            term.status === "PAID" ? "text-orange-600" : "text-destructive"
+                          }`}>
                             <Calendar className="h-4 w-4" />
                             <span className="font-semibold text-sm">
-                              {term.daysLate > 0 
-                                ? `LATE PAYMENT - ${term.daysLate} day${term.daysLate !== 1 ? 's' : ''} overdue`
-                                : `OVERDUE - ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''} late`
-                              }
+                              {term.status === "PAID" && wasPaidLate ? (
+                                `PAID LATE - ${daysLateWhenPaid} day${daysLateWhenPaid !== 1 ? 's' : ''} overdue`
+                              ) : term.daysLate > 0 ? (
+                                `LATE PAYMENT - ${term.daysLate} day${term.daysLate !== 1 ? 's' : ''} overdue`
+                              ) : (
+                                `OVERDUE - ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''} late`
+                              )}
                             </span>
                           </div>
-                          {term.penaltyAmount > 0 && (
+                          {(term.penaltyAmount > 0 || (term.status === "PAID" && wasPaidLate)) && (
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">
-                                Late fee (₱{(loan.loanType.latePaymentPenaltyPerDay || 0).toLocaleString()}/day × {term.daysLate} days)
+                                Late fee (₱{(loan.loanType.latePaymentPenaltyPerDay || 0).toLocaleString()}/day × {term.status === "PAID" ? daysLateWhenPaid : term.daysLate} days)
                               </span>
-                              <span className="font-semibold text-destructive">
-                                +₱{term.penaltyAmount.toLocaleString()}
+                              <span className={`font-semibold ${
+                                term.status === "PAID" ? "text-orange-600" : "text-destructive"
+                              }`}>
+                                +₱{(term.penaltyAmount || 0).toLocaleString()}
                               </span>
                             </div>
                           )}
-                          {term.penaltyAmount > 0 && (
+                          {term.status !== "PAID" && term.penaltyAmount > 0 && (
                             <div className="flex items-center justify-between text-sm border-t pt-2">
                               <span className="font-semibold">Total with penalty</span>
                               <span className="font-bold text-destructive">

@@ -133,23 +133,23 @@ export async function POST(request: Request) {
       // Only update penalty info if there's a penalty, but keep status as PENDING
       // The term status will be updated to PAID when payment is approved
       if (effectivePenalty > 0) {
-        await (prisma as any).loanTerm.update({
-          where: { id: termId },
-          data: {
+      await (prisma as any).loanTerm.update({
+        where: { id: termId },
+        data: {
             daysLate: calculatedDaysLate,
             penaltyAmount: effectivePenalty,
             // Keep status as PENDING - it will be updated to PAID when payment is approved
-          }
-        })
-        
-        // Update loan total amount and remaining amount to include penalty
-        await prisma.loan.update({
-          where: { id: loanId },
-          data: {
+        }
+      })
+      
+      // Update loan total amount and remaining amount to include penalty
+      await prisma.loan.update({
+        where: { id: loanId },
+        data: {
             totalAmount: loan.totalAmount + effectivePenalty,
             remainingAmount: loan.remainingAmount + effectivePenalty,
-          }
-        })
+        }
+      })
       }
       
       // Loan status will be recalculated based on unpaid terms when payment is approved

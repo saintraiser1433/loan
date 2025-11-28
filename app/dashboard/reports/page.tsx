@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import { generatePDFReport, formatCurrency, formatDate } from "@/lib/pdf-generator"
+import { generatePDFReport, formatCurrency, formatCurrencyForPDF, formatDate } from "@/lib/pdf-generator"
 import { 
   Download, 
   FileSpreadsheet, 
@@ -162,16 +162,16 @@ export default function ReportsPage() {
             { label: "Active Loans", value: data.activeLoans || 0 },
             { label: "Paid Loans", value: data.paidLoans || 0 },
             { label: "Overdue Loans", value: data.overdueLoans || 0 },
-            { label: "Total Disbursed", value: formatCurrency(data.totalDisbursed || 0) },
+            { label: "Total Disbursed", value: formatCurrencyForPDF(data.totalDisbursed || 0) },
           ]
           pdfData.tableHeaders = ["Metric", "Value"]
           pdfData.tableData = [
             ["Total Applications", data.totalApplications || 0],
             ["Pending Applications", data.pendingApplications || 0],
             ["Total Borrowers", data.totalBorrowers || 0],
-            ["Total Amount Disbursed", formatCurrency(data.totalDisbursed || 0)],
-            ["Total Amount Collected", formatCurrency(data.totalCollected || 0)],
-            ["Outstanding Balance", formatCurrency(data.outstandingBalance || 0)],
+            ["Total Amount Disbursed", formatCurrencyForPDF(data.totalDisbursed || 0)],
+            ["Total Amount Collected", formatCurrencyForPDF(data.totalCollected || 0)],
+            ["Outstanding Balance", formatCurrencyForPDF(data.outstandingBalance || 0)],
           ]
           break
 
@@ -187,9 +187,9 @@ export default function ReportsPage() {
           pdfData.tableData = (data.loans || []).map((loan: any) => [
             loan.user?.name || "N/A",
             loan.loanType?.name || "N/A",
-            formatCurrency(loan.principalAmount),
-            formatCurrency(loan.totalAmount),
-            formatCurrency(loan.remainingAmount),
+            formatCurrencyForPDF(loan.principalAmount),
+            formatCurrencyForPDF(loan.totalAmount),
+            formatCurrencyForPDF(loan.remainingAmount),
             loan.status,
             formatDate(loan.dueDate),
           ])
@@ -207,7 +207,7 @@ export default function ReportsPage() {
           pdfData.tableData = (data.applications || []).map((app: any) => [
             app.user?.name || "N/A",
             app.loanType?.name || "N/A",
-            formatCurrency(app.requestedAmount),
+            formatCurrencyForPDF(app.requestedAmount),
             app.status,
             formatDate(app.createdAt),
           ])
@@ -223,12 +223,12 @@ export default function ReportsPage() {
             { label: "Total Payments", value: data.payments?.length || 0 },
             { label: "Completed", value: data.payments?.filter((p: any) => p.status === "COMPLETED").length || 0 },
             { label: "Pending", value: data.payments?.filter((p: any) => p.status === "PENDING").length || 0 },
-            { label: "Total Collected", value: formatCurrency(completedAmount) },
+            { label: "Total Collected", value: formatCurrencyForPDF(completedAmount) },
           ]
           pdfData.tableHeaders = ["Borrower", "Amount", "Type", "Method", "Status", "Date"]
           pdfData.tableData = (data.payments || []).map((payment: any) => [
             payment.user?.name || "N/A",
-            formatCurrency(payment.amount),
+            formatCurrencyForPDF(payment.amount),
             payment.paymentType,
             payment.paymentMethod || "N/A",
             payment.status,
@@ -250,7 +250,7 @@ export default function ReportsPage() {
             borrower.email || "N/A",
             borrower.phone || "N/A",
             borrower.creditScore || 0,
-            formatCurrency(borrower.loanLimit || 0),
+            formatCurrencyForPDF(borrower.loanLimit || 0),
             borrower.status || "PENDING",
           ])
           break

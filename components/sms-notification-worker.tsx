@@ -6,15 +6,27 @@ export function SmsNotificationWorker() {
   useEffect(() => {
     const checkNotifications = async () => {
       try {
-        await fetch("/api/sms/notifications", {
+        const response = await fetch("/api/sms/notifications", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
         })
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.results) {
+            const { dueDateReminders, overdueNotifications } = data.results
+            if (dueDateReminders > 0 || overdueNotifications > 0) {
+              console.log(`[SMS Worker] Sent ${dueDateReminders} reminders and ${overdueNotifications} overdue notifications`)
+            }
+          }
+        } else {
+          console.warn("[SMS Worker] Notification check returned:", response.status, response.statusText)
+        }
       } catch (error) {
         // Silently fail - notifications will be retried on next interval
-        console.error("SMS notification check failed:", error)
+        console.error("[SMS Worker] Notification check failed:", error)
       }
     }
 
