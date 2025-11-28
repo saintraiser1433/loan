@@ -45,38 +45,38 @@ export function DashboardLayout({
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4">
-          <div className="flex items-center gap-2">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-2 sm:px-4">
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0">
             <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold">Dashboard</h1>
+            <Separator orientation="vertical" className="mr-1 sm:mr-2 h-4 hidden sm:block" />
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+              <h1 className="text-sm sm:text-lg font-semibold truncate">Dashboard</h1>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
             {session?.user?.role === "BORROWER" && creditInfo && (
               <>
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border">
+                <div className="hidden lg:flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-md bg-muted/50 border">
                   <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                  <span className="text-sm font-medium">
-                    <span className="text-muted-foreground">Score:</span>{" "}
+                  <span className="text-xs sm:text-sm font-medium">
+                    <span className="text-muted-foreground hidden sm:inline">Score:</span>{" "}
                     <span className="font-semibold">{creditInfo.creditScore}</span>
                   </span>
                 </div>
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border">
+                <div className="hidden lg:flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-md bg-muted/50 border">
                   <Wallet className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm font-medium">
-                    <span className="text-muted-foreground">Limit:</span>{" "}
+                  <span className="text-xs sm:text-sm font-medium">
+                    <span className="text-muted-foreground hidden sm:inline">Limit:</span>{" "}
                     <span className="font-semibold">₱{creditInfo.loanLimit.toLocaleString()}</span>
                   </span>
                 </div>
-                <Separator orientation="vertical" className="h-4" />
+                <Separator orientation="vertical" className="h-4 hidden lg:block" />
               </>
             )}
             <ThemeToggle />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">
+        <div className="flex flex-1 flex-col gap-4 p-2 sm:p-4">
           {children}
         </div>
       </SidebarInset>

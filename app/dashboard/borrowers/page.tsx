@@ -412,21 +412,21 @@ export default function BorrowersPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Borrowers</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold">Borrowers</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Manage and approve borrower registrations
             </p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b">
+        <div className="flex gap-1 sm:gap-2 border-b overflow-x-auto">
           <button
             onClick={() => setActiveTab("all")}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
               activeTab === "all"
                 ? "border-blue-500 text-blue-600 dark:text-blue-400"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -436,7 +436,7 @@ export default function BorrowersPage() {
           </button>
           <button
             onClick={() => setActiveTab("approved")}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
               activeTab === "approved"
                 ? "border-blue-500 text-blue-600 dark:text-blue-400"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -446,7 +446,7 @@ export default function BorrowersPage() {
           </button>
           <button
             onClick={() => setActiveTab("pending")}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
               activeTab === "pending"
                 ? "border-blue-500 text-blue-600 dark:text-blue-400"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -456,7 +456,7 @@ export default function BorrowersPage() {
           </button>
           <button
             onClick={() => setActiveTab("blocked")}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
               activeTab === "blocked"
                 ? "border-blue-500 text-blue-600 dark:text-blue-400"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -476,7 +476,7 @@ export default function BorrowersPage() {
 
         {/* Approve Dialog */}
         <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Approve Borrower</DialogTitle>
               <DialogDescription>
@@ -802,7 +802,7 @@ export default function BorrowersPage() {
                 {(borrowerDetails.primaryIdUrl || borrowerDetails.secondaryIdUrl || borrowerDetails.selfieWithPrimaryIdUrl || borrowerDetails.selfieWithSecondaryIdUrl) && (
                   <div className="rounded-lg border bg-card p-4 space-y-3">
                     <h3 className="text-lg font-semibold">Identity Documents</h3>
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                       {borrowerDetails.primaryIdUrl && (
                         <div className="space-y-2">
                           <div className="text-sm font-medium text-muted-foreground">Primary ID</div>

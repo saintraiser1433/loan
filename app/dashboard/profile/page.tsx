@@ -179,10 +179,10 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Profile Settings</h1>
-          <p className="text-muted-foreground">Update your personal information</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Profile Settings</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Update your personal information</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -196,7 +196,7 @@ export default function ProfilePage() {
               <CardDescription>Your basic personal details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Full Name *</Label>
                   <Input
@@ -217,7 +217,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label>First Name</Label>
                   <Input
@@ -271,7 +271,7 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Date of Birth</Label>
                   <Input
@@ -297,7 +297,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Father's Name</Label>
                   <Input
@@ -331,7 +331,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Block</Label>
                   <Input
@@ -355,7 +355,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label>City</Label>
                   <Input
@@ -388,7 +388,7 @@ export default function ProfilePage() {
               <CardDescription>Your employment and income details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Position</Label>
                   <Input
@@ -405,7 +405,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Monthly Salary (Min)</Label>
                   <Input

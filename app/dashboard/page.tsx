@@ -92,10 +92,10 @@ export default async function DashboardPage() {
   return (
     <DashboardTermsWrapper>
       <DashboardLayout>
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Welcome back, {user.name}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {user.name}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             {user.role === "BORROWER" 
               ? "Manage your loans and applications"
               : "Review applications and manage loans"}
@@ -103,7 +103,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Quick Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {user.role === "BORROWER" ? (
             <>
               <div className="rounded-lg border bg-card p-6">
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Recent Activity */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
           {user.role === "BORROWER" ? (
             <>
               <div className="rounded-lg border bg-card p-6">

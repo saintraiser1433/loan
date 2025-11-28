@@ -302,13 +302,13 @@ export default function LoansPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-2xl sm:text-3xl font-bold">
               {session?.user?.role === "BORROWER" ? "My Loans" : "All Loans"}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               {session?.user?.role === "BORROWER" 
                 ? "View and manage your loans"
                 : "Manage all loans"}
@@ -316,7 +316,7 @@ export default function LoansPage() {
           </div>
           {session?.user?.role === "BORROWER" && (
             <Link href="/dashboard/apply">
-              <Button>Apply for Loan</Button>
+              <Button className="w-full sm:w-auto">Apply for Loan</Button>
             </Link>
           )}
         </div>

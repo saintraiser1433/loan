@@ -111,12 +111,64 @@ export function DataTable<T extends Record<string, any>>({
               setSearch(event.target.value)
               setCurrentPage(1)
             }}
-            className="h-9 max-w-sm"
+            className="h-9 w-full sm:max-w-sm"
           />
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border bg-card">
+      {/* Mobile Card View */}
+      <div className="block md:hidden space-y-3">
+        {paginatedData.length > 0 ? (
+          paginatedData.map((row, rowIndex) => {
+            const globalIndex = startIndex + rowIndex
+            const isSelected = selectedRows.has(globalIndex)
+            return (
+              <div
+                key={rowIndex}
+                className={`rounded-lg border bg-card p-4 space-y-3 ${
+                  isSelected ? "bg-muted/50" : ""
+                }`}
+              >
+                {selectable && (
+                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleRowSelection(globalIndex)}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-xs text-muted-foreground">Select</span>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  {columns.map((col, colIndex) => {
+                    const value = typeof col.accessor === "function"
+                      ? col.accessor(row, globalIndex)
+                      : String(row[col.accessor] ?? "")
+                    return (
+                      <div key={colIndex} className="flex flex-col gap-1">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          {col.header}
+                        </div>
+                        <div className={`text-sm ${col.className ?? ""}`}>
+                          {value}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })
+        ) : (
+          <div className="p-6 text-center text-sm text-muted-foreground rounded-lg border bg-card">
+            No data found
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-hidden rounded-lg border bg-card">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -201,7 +253,7 @@ export function DataTable<T extends Record<string, any>>({
         </div>
 
         {safeFilteredData.length > 0 && (
-          <div className="flex items-center justify-between gap-4 border-t bg-muted/20 px-3 py-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t bg-muted/20 px-3 py-2">
             <div className="text-xs text-muted-foreground">
               {selectable ? (
                 <span>{selectedRows.size} of {safeFilteredData.length} selected</span>
@@ -213,7 +265,7 @@ export function DataTable<T extends Record<string, any>>({
               )}
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Rows per page:</span>
                 <Select
@@ -281,6 +333,67 @@ export function DataTable<T extends Record<string, any>>({
           </div>
         )}
       </div>
+
+      {/* Mobile Pagination */}
+      {safeFilteredData.length > 0 && (
+        <div className="block md:hidden flex flex-col gap-3 border-t bg-muted/20 px-3 py-3">
+          <div className="text-xs text-muted-foreground text-center">
+            {selectable ? (
+              <span>{selectedRows.size} of {safeFilteredData.length} selected</span>
+            ) : (
+              <span>
+                Showing {startIndex + 1} to {Math.min(endIndex, safeFilteredData.length)} of{" "}
+                {safeFilteredData.length} entries
+              </span>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => goToPage(1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
