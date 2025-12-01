@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge"
 import { TermPaymentModal } from "@/components/term-payment-modal"
 import { Calendar, CheckCircle2, CreditCard, DollarSign, Eye, XCircle } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { getDiceBearAvatar } from "@/lib/avatar"
 
 interface Payment {
   id: string
@@ -208,12 +210,22 @@ export function LoanDetailsView({ loan }: LoanDetailsViewProps) {
           <CardTitle>Loan Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <div className="text-sm text-muted-foreground">Borrower</div>
-              <div className="font-medium">{loan.user.name}</div>
+          <div className="flex flex-col sm:flex-row gap-6 mb-6 pb-6 border-b">
+            <div className="flex-shrink-0">
+              <Avatar className="h-24 w-24 sm:h-32 sm:w-32">
+                <AvatarImage src={getDiceBearAvatar(loan.user.email || loan.user.name || loan.id)} alt={loan.user.name} />
+                <AvatarFallback className="text-2xl sm:text-3xl">
+                  {loan.user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+            <div className="flex-1">
+              <div className="text-sm text-muted-foreground mb-1">Borrower</div>
+              <div className="text-xl sm:text-2xl font-semibold mb-1">{loan.user.name}</div>
               <div className="text-sm text-muted-foreground">{loan.user.email}</div>
             </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <div className="text-sm text-muted-foreground">Loan Type</div>
               <div className="font-medium">{loan.loanType.name}</div>

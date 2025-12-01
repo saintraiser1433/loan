@@ -8,6 +8,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/data-table"
 import { formatCurrency } from "@/lib/utils"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { getDiceBearAvatar } from "@/lib/avatar"
 
 interface LoanTerm {
   id: string
@@ -138,15 +140,28 @@ export default function LoansPage() {
   const paidCount = loans.filter(l => calculateLoanStatus(l) === "PAID").length
 
   const columns = [
-    ...(session?.user?.role !== "BORROWER" ? [{
-      header: "Borrower",
-      accessor: (row: Loan) => (
-        <div>
-          <div className="font-medium">{row.user?.name}</div>
-          <div className="text-sm text-muted-foreground">{row.user?.email}</div>
-        </div>
-      ),
-    }] : []),
+    ...(session?.user?.role !== "BORROWER" ? [
+      {
+        header: "Avatar",
+        accessor: (row: Loan) => (
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={getDiceBearAvatar(row.user?.email || row.user?.name || row.id)} alt={row.user?.name || 'User'} />
+            <AvatarFallback>
+              {row.user?.name ? row.user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+            </AvatarFallback>
+          </Avatar>
+        ),
+      },
+      {
+        header: "Borrower",
+        accessor: (row: Loan) => (
+          <div>
+            <div className="font-medium">{row.user?.name}</div>
+            <div className="text-sm text-muted-foreground">{row.user?.email}</div>
+          </div>
+        ),
+      },
+    ] : []),
     {
       header: "Loan Type",
       accessor: (row: Loan) => row.loanType.name,

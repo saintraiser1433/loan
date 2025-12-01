@@ -15,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MoreVertical, Eye, CheckCircle, XCircle } from "lucide-react"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { getDiceBearAvatar } from "@/lib/avatar"
 
 interface Application {
   id: string
@@ -99,6 +101,17 @@ export default function ApplicationsPage() {
   const rejectedCount = applications.filter(a => a.status === "REJECTED").length
 
   const columns = [
+    {
+      header: "Avatar",
+      accessor: (row: Application) => (
+        <Avatar className="h-10 w-10">
+          <AvatarImage src={getDiceBearAvatar(row.user.email || row.user.name || row.id)} alt={row.user.name} />
+          <AvatarFallback>
+            {row.user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+          </AvatarFallback>
+        </Avatar>
+      ),
+    },
     {
       header: "Borrower",
       accessor: (row: Application) => (
