@@ -59,6 +59,7 @@ export async function PUT(
         email: true,
         creditScore: true,
         loanLimit: true,
+        status: true,
       }
     })
 
@@ -66,6 +67,14 @@ export async function PUT(
       return NextResponse.json(
         { error: "Borrower not found" },
         { status: 404 }
+      )
+    }
+
+    // Prevent editing credit score/loan limit for pending borrowers
+    if (borrower.status === "PENDING" || borrower.status === null) {
+      return NextResponse.json(
+        { error: "Cannot edit credit score or loan limit for pending borrowers. Please approve or reject the borrower first." },
+        { status: 400 }
       )
     }
 

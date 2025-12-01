@@ -368,10 +368,6 @@ export default function BorrowersPage() {
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleEdit(row)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit Credit Score & Loan Limit
-              </DropdownMenuItem>
               {status === "PENDING" && (
                 <>
                   <DropdownMenuItem onClick={() => handleApprove(row)}>
@@ -387,22 +383,30 @@ export default function BorrowersPage() {
                   </DropdownMenuItem>
                 </>
               )}
-              <DropdownMenuItem 
-                onClick={() => handleToggleBlock(row)}
-                className={row.isActive ? "text-destructive" : ""}
-              >
-                {row.isActive ? (
-                  <>
-                    <Ban className="mr-2 h-4 w-4" />
-                    Block Borrower
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Activate Borrower
-                  </>
-                )}
-              </DropdownMenuItem>
+              {status === "APPROVED" && (
+                <>
+                  <DropdownMenuItem onClick={() => handleEdit(row)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit Credit Score & Loan Limit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleToggleBlock(row)}
+                    className={row.isActive ? "text-destructive" : ""}
+                  >
+                    {row.isActive ? (
+                      <>
+                        <Ban className="mr-2 h-4 w-4" />
+                        Block Borrower
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Activate Borrower
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )

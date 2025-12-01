@@ -34,14 +34,14 @@ export async function PUT(
     try {
       borrower = await prisma.user.findUnique({
         where: { id },
-        select: { role: true, isActive: true }
+        select: { role: true, isActive: true, status: true }
       })
     } catch (error: any) {
       // If isActive field doesn't exist in Prisma client yet, query without it
       if (error.message?.includes("isActive") || error.code === "P2009") {
         borrower = await prisma.user.findUnique({
           where: { id },
-          select: { role: true }
+          select: { role: true, status: true }
         })
         if (borrower) {
           (borrower as any).isActive = true // Default to true
@@ -55,6 +55,14 @@ export async function PUT(
       return NextResponse.json(
         { error: "Borrower not found" },
         { status: 404 }
+      )
+    }
+
+    // Prevent blocking pending borrowers
+    if ((borrower.status === "PENDING" || borrower.status === null) && (borrower as any).isActive === true) {
+      return NextResponse.json(
+        { error: "Cannot block pending borrowers. Please approve or reject the borrower first." },
+        { status: 400 }
       )
     }
 
