@@ -45,6 +45,7 @@ export default function ApplicationsPage() {
   const { toast } = useToast()
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<"all" | "pending" | "approved" | "rejected">("all")
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -77,6 +78,25 @@ export default function ApplicationsPage() {
   if (status === "loading" || loading) {
     return <DashboardLayout><div>Loading...</div></DashboardLayout>
   }
+
+  // Filter applications based on active tab
+  const filteredApplications = applications.filter((app) => {
+    if (activeTab === "pending") {
+      return app.status === "PENDING"
+    }
+    if (activeTab === "approved") {
+      return app.status === "APPROVED"
+    }
+    if (activeTab === "rejected") {
+      return app.status === "REJECTED"
+    }
+    return true // "all" tab shows everything
+  })
+
+  // Calculate counts for each tab
+  const pendingCount = applications.filter(a => a.status === "PENDING").length
+  const approvedCount = applications.filter(a => a.status === "APPROVED").length
+  const rejectedCount = applications.filter(a => a.status === "REJECTED").length
 
   const columns = [
     {
@@ -153,8 +173,52 @@ export default function ApplicationsPage() {
           </div>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 sm:gap-2 border-b overflow-x-auto">
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === "all"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            All ({applications.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("pending")}
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === "pending"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Pending ({pendingCount})
+          </button>
+          <button
+            onClick={() => setActiveTab("approved")}
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === "approved"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Approved ({approvedCount})
+          </button>
+          <button
+            onClick={() => setActiveTab("rejected")}
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === "rejected"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Rejected ({rejectedCount})
+          </button>
+        </div>
+
         <DataTable
-          data={applications}
+          data={filteredApplications}
           columns={columns}
           searchable={true}
           searchPlaceholder="Search applications..."

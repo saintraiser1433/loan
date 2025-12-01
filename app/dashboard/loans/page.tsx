@@ -42,6 +42,7 @@ export default function LoansPage() {
   const { data: session, status } = useSession()
   const [loans, setLoans] = useState<Loan[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<"all" | "active" | "overdue" | "paid">("all")
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -70,6 +71,71 @@ export default function LoansPage() {
   if (status === "loading" || loading) {
     return <DashboardLayout><div>Loading...</div></DashboardLayout>
   }
+
+  // Helper function to calculate loan status (same logic as in Status column)
+  const calculateLoanStatus = (loan: Loan): string => {
+    let displayStatus = loan.status
+    if (loan.terms && loan.terms.length > 0) {
+      const allTermsPaid = loan.terms.every(t => t.status === "PAID")
+      const hasRemainingAmount = loan.remainingAmount > 0
+      
+      // If all terms are paid but status is not PAID, or if status is PAID but not all terms are paid
+      if (allTermsPaid && !hasRemainingAmount) {
+        displayStatus = "PAID"
+      } else if (displayStatus === "PAID" && (!allTermsPaid || hasRemainingAmount)) {
+        // Status says PAID but terms don't match - show ACTIVE instead
+        displayStatus = "ACTIVE"
+      }
+      
+      // Check if there are any unpaid terms that are overdue
+      // Only PENDING or OVERDUE terms that are past due should make loan overdue
+      // PAID terms should never be considered overdue
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const hasOverdueTerms = loan.terms.some((t: any) => {
+        // Only check terms that are not PAID
+        if (t.status === "PAID") return false
+        
+        const termDueDate = new Date(t.dueDate)
+        termDueDate.setHours(0, 0, 0, 0)
+        // Term is overdue if it's unpaid (PENDING or OVERDUE) and past due date
+        return termDueDate < today
+      })
+      
+      if (hasOverdueTerms && displayStatus === "ACTIVE") {
+        displayStatus = "OVERDUE"
+      }
+    } else {
+      // Fallback to loan dueDate if no terms available
+      const daysUntilDue = Math.ceil(
+        (new Date(loan.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      )
+      if (daysUntilDue < 0 && displayStatus === "ACTIVE") {
+        displayStatus = "OVERDUE"
+      }
+    }
+    return displayStatus
+  }
+
+  // Filter loans based on active tab
+  const filteredLoans = loans.filter((loan) => {
+    const loanStatus = calculateLoanStatus(loan)
+    if (activeTab === "active") {
+      return loanStatus === "ACTIVE"
+    }
+    if (activeTab === "overdue") {
+      return loanStatus === "OVERDUE"
+    }
+    if (activeTab === "paid") {
+      return loanStatus === "PAID"
+    }
+    return true // "all" tab shows everything
+  })
+
+  // Calculate counts for each tab
+  const activeCount = loans.filter(l => calculateLoanStatus(l) === "ACTIVE").length
+  const overdueCount = loans.filter(l => calculateLoanStatus(l) === "OVERDUE").length
+  const paidCount = loans.filter(l => calculateLoanStatus(l) === "PAID").length
 
   const columns = [
     ...(session?.user?.role !== "BORROWER" ? [{
@@ -132,48 +198,7 @@ export default function LoansPage() {
     {
       header: "Status",
       accessor: (row: Loan) => {
-        // Check if status should be PAID based on terms
-        let displayStatus = row.status
-        if (row.terms && row.terms.length > 0) {
-          const allTermsPaid = row.terms.every(t => t.status === "PAID")
-          const hasRemainingAmount = row.remainingAmount > 0
-          
-          // If all terms are paid but status is not PAID, or if status is PAID but not all terms are paid
-          if (allTermsPaid && !hasRemainingAmount) {
-            displayStatus = "PAID"
-          } else if (displayStatus === "PAID" && (!allTermsPaid || hasRemainingAmount)) {
-            // Status says PAID but terms don't match - show ACTIVE instead
-            displayStatus = "ACTIVE"
-          }
-          
-          // Check if there are any unpaid terms that are overdue
-          // Only PENDING or OVERDUE terms that are past due should make loan overdue
-          // PAID terms should never be considered overdue
-          const today = new Date()
-          today.setHours(0, 0, 0, 0)
-          const hasOverdueTerms = row.terms.some((t: any) => {
-            // Only check terms that are not PAID
-            if (t.status === "PAID") return false
-            
-            const termDueDate = new Date(t.dueDate)
-            termDueDate.setHours(0, 0, 0, 0)
-            // Term is overdue if it's unpaid (PENDING or OVERDUE) and past due date
-            return termDueDate < today
-          })
-          
-          if (hasOverdueTerms && displayStatus === "ACTIVE") {
-            displayStatus = "OVERDUE"
-          }
-        } else {
-          // Fallback to loan dueDate if no terms available
-          const daysUntilDue = Math.ceil(
-          (new Date(row.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-        )
-          if (daysUntilDue < 0 && displayStatus === "ACTIVE") {
-            displayStatus = "OVERDUE"
-          }
-        }
-        
+        const displayStatus = calculateLoanStatus(row)
         const isOverdue = displayStatus === "OVERDUE"
         
         return (
@@ -322,8 +347,52 @@ export default function LoansPage() {
           )}
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 sm:gap-2 border-b overflow-x-auto">
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === "all"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            All ({loans.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === "active"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Active ({activeCount})
+          </button>
+          <button
+            onClick={() => setActiveTab("overdue")}
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === "overdue"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Overdue ({overdueCount})
+          </button>
+          <button
+            onClick={() => setActiveTab("paid")}
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === "paid"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Paid ({paidCount})
+          </button>
+        </div>
+
         <DataTable
-          data={loans}
+          data={filteredLoans}
           columns={columns}
           searchable={true}
           searchPlaceholder="Search loans..."
