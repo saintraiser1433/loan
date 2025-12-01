@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { TermPaymentModal } from "@/components/term-payment-modal"
 import { Calendar, CheckCircle2, CreditCard, DollarSign, Eye, XCircle } from "lucide-react"
+import { formatCurrency } from "@/lib/utils"
 
 interface Payment {
   id: string
@@ -219,19 +220,19 @@ export function LoanDetailsView({ loan }: LoanDetailsViewProps) {
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Principal Amount</div>
-              <div className="font-medium">₱{loan.principalAmount.toLocaleString()}</div>
+              <div className="font-medium">{formatCurrency(loan.principalAmount)}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Total Amount</div>
-              <div className="font-medium">₱{loan.totalAmount.toLocaleString()}</div>
+              <div className="font-medium">{formatCurrency(loan.totalAmount)}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Amount Paid</div>
-              <div className="font-medium">₱{loan.amountPaid.toLocaleString()}</div>
+              <div className="font-medium">{formatCurrency(loan.amountPaid)}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Remaining Amount</div>
-              <div className="font-medium">₱{loan.remainingAmount.toLocaleString()}</div>
+              <div className="font-medium">{formatCurrency(loan.remainingAmount)}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Payment Duration</div>
@@ -324,11 +325,11 @@ export function LoanDetailsView({ loan }: LoanDetailsViewProps) {
                       <div className="grid gap-4 rounded-lg bg-muted p-4 md:grid-cols-3">
                         <div>
                           <div className="text-sm text-muted-foreground">Term Amount</div>
-                          <div className="font-semibold">₱{term.amount.toLocaleString()}</div>
+                          <div className="font-semibold">{formatCurrency(term.amount)}</div>
                         </div>
                         <div>
                           <div className="text-sm text-muted-foreground">Amount Paid</div>
-                          <div className="font-semibold">₱{term.amountPaid.toLocaleString()}</div>
+                          <div className="font-semibold">{formatCurrency(term.amountPaid)}</div>
                         </div>
                         <div>
                           <div className="text-sm text-muted-foreground">Amount Due</div>

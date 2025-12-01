@@ -55,6 +55,7 @@ model User {
   loans             Loan[]
   payments          Payment[]
   activityLogs      ActivityLog[]
+  notifications     Notification[]
 
   @@map("users")
 }
@@ -280,6 +281,39 @@ model ActivityLog {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@map("activity_logs")
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  title       String
+  message     String
+  icon        String?
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  link        String?          // URL to redirect when clicked
+  entityType  String?          // e.g., "PAYMENT", "LOAN", "APPLICATION"
+  entityId    String?          // ID of the related entity
+  createdAt   DateTime         @default(now())
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  PAYMENT_PENDING
+  PAYMENT_APPROVED
+  PAYMENT_REJECTED
+  PAYMENT_DUE_SOON
+  PAYMENT_OVERDUE
+  APPLICATION_PENDING
+  LOAN_APPROVED
+  LOAN_REJECTED
+  LOAN_COMPLETED
 }
 
 enum UserRole {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sendSMS } from "@/lib/sms"
+import { createNotification } from "@/lib/notifications"
+import { formatCurrencyPlain } from "@/lib/utils"
 
 // This endpoint should be called by a cron job (e.g., every hour or daily)
 // You can set it up with Vercel Cron, GitHub Actions, or any cron service
@@ -66,9 +68,11 @@ export async function GET(request: Request) {
         (termDueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
       )
 
-      // Only send reminder if exactly 7 days or less before due date
-      // Send reminder if it hasn't been sent, or send daily reminders for terms due soon
-      const shouldSendReminder = daysUntilDue <= 7 && daysUntilDue >= 0 && term.loan.user.phone
+      // Only send reminder if exactly 7 days or less before due date AND not overdue
+      // Don't send "due soon" notifications if term is already overdue (overdue notifications will handle that)
+      // Also check if term is already overdue - if so, skip "due soon" notification
+      const isOverdue = daysUntilDue < 0
+      const shouldSendReminder = daysUntilDue <= 7 && daysUntilDue >= 0 && !isOverdue && term.loan.user.phone
       
       console.log(`[SMS Notifications] Term ${term.id}: daysUntilDue=${daysUntilDue}, shouldSend=${shouldSendReminder}, reminderSmsSent=${term.reminderSmsSent}`)
       
@@ -104,31 +108,74 @@ export async function GET(request: Request) {
 
           const amountDue = term.amount - (term.amountPaid || 0)
           
-          const reminderMessage = `Dear ${term.loan.user.name},\n\nREMINDER: Your payment for Term ${term.termNumber} (${monthName} ${year}) is due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}.\n\nPayment Details:\n- Loan ID: ${term.loanId}\n- Term Number: ${term.termNumber}\n- Amount Due: ₱${amountDue.toLocaleString()}\n- Due Date: ${termDueDate.toLocaleDateString()}\n\nPlease make your payment before the due date to avoid late fees.\n\nBest regards,\nGlan Credible and Capital Inc.`
-
-          try {
-            const smsSent = await sendSMS(term.loan.user.phone, reminderMessage, term.loan.userId)
-            
-            if (smsSent) {
-              // Only update flag if SMS was actually sent (not skipped)
-              // Update status to 1 (sent) and update timestamp
-              await (prisma as any).loanTerm.update({
-                where: { id: term.id },
-                data: { 
-                  reminderSmsSent: 1,
-                  updatedAt: new Date() // Update timestamp to track when reminder was sent
-                }
-              })
-              
-              console.log(`[SMS Notifications] ✅ Sent reminder for term ${term.id} (${daysUntilDue} days until due)`)
-              results.dueDateReminders++
-            } else {
-              console.log(`[SMS Notifications] ⚠️ SMS skipped for term ${term.id} (SMS not configured or inactive)`)
-              results.errors.push(`SMS skipped for term ${term.id}: SMS settings not configured or inactive`)
+          // Check if notification already exists for this term today
+          const todayStart = new Date(today)
+          todayStart.setHours(0, 0, 0, 0)
+          const todayEnd = new Date(today)
+          todayEnd.setHours(23, 59, 59, 999)
+          
+          const existingNotification = await prisma.notification.findFirst({
+            where: {
+              userId: term.loan.userId,
+              type: "PAYMENT_DUE_SOON",
+              entityType: "LOAN_TERM",
+              entityId: term.id,
+              createdAt: {
+                gte: todayStart,
+                lte: todayEnd
+              }
             }
-          } catch (error: any) {
-            console.error(`[SMS Notifications] ❌ Failed to send reminder for term ${term.id}:`, error)
-            results.errors.push(`Failed to send reminder for term ${term.id}: ${error.message}`)
+          })
+
+          // Only create notification if one doesn't exist for today
+          if (!existingNotification) {
+            const reminderMessage = `Dear ${term.loan.user.name},\n\nREMINDER: Your payment for Term ${term.termNumber} (${monthName} ${year}) is due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}.\n\nPayment Details:\n- Loan ID: ${term.loanId}\n- Term Number: ${term.termNumber}\n- Amount Due: ₱${formatCurrencyPlain(amountDue)}\n- Due Date: ${termDueDate.toLocaleDateString()}\n\nPlease make your payment before the due date to avoid late fees.\n\nBest regards,\nGlan Credible and Capital Inc.`
+
+            try {
+              // Create in-app notification for borrower (only once per day)
+              console.log(`[SMS Notifications] Creating notification for term ${term.id}, user ${term.loan.userId}`)
+              const notification = await createNotification({
+                userId: term.loan.userId,
+                type: "PAYMENT_DUE_SOON",
+                title: `Payment Due in ${daysUntilDue} Day${daysUntilDue !== 1 ? 's' : ''}`,
+                message: `Your payment for Term ${term.termNumber} (${monthName} ${year}) is due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}. Amount due: ₱${formatCurrencyPlain(amountDue)}`,
+                link: `/dashboard/loans/${term.loanId}`,
+                entityType: "LOAN_TERM",
+                entityId: term.id
+              })
+
+              if (notification) {
+                console.log(`[SMS Notifications] ✅ Created notification ${notification.id} for term ${term.id}`)
+              } else {
+                console.error(`[SMS Notifications] ❌ Failed to create notification for term ${term.id} - createNotification returned null`)
+              }
+
+              // Try to send SMS
+              const smsSent = await sendSMS(term.loan.user.phone, reminderMessage, term.loan.userId)
+              
+              if (smsSent) {
+                // Only update flag if SMS was actually sent (not skipped)
+                // Update status to 1 (sent) and update timestamp
+                await (prisma as any).loanTerm.update({
+                  where: { id: term.id },
+                  data: { 
+                    reminderSmsSent: 1,
+                    updatedAt: new Date() // Update timestamp to track when reminder was sent
+                  }
+                })
+                
+                console.log(`[SMS Notifications] ✅ Sent reminder for term ${term.id} (${daysUntilDue} days until due)`)
+                results.dueDateReminders++
+              } else {
+                console.log(`[SMS Notifications] ⚠️ SMS skipped for term ${term.id} (SMS not configured or inactive), but notification created`)
+                results.errors.push(`SMS skipped for term ${term.id}: SMS settings not configured or inactive`)
+              }
+            } catch (error: any) {
+              console.error(`[SMS Notifications] ❌ Failed to send reminder for term ${term.id}:`, error)
+              results.errors.push(`Failed to send reminder for term ${term.id}: ${error.message}`)
+            }
+          } else {
+            console.log(`[SMS Notifications] ⏭️ Skipping notification for term ${term.id} - already sent today`)
           }
         }
       }
@@ -231,32 +278,75 @@ export async function GET(request: Request) {
         const estimatedPenalty = daysOverdue * penaltyPerDay
         const totalAmountDue = amountDue + (term.penaltyAmount || estimatedPenalty)
 
-        const overdueMessage = `Dear ${term.loan.user.name},\n\n⚠️ URGENT: Your payment for Term ${term.termNumber} (${monthName} ${year}) is OVERDUE!\n\nPayment Details:\n- Loan ID: ${term.loanId}\n- Term Number: ${term.termNumber}\n- Amount Due: ₱${amountDue.toLocaleString()}\n- Days Overdue: ${daysOverdue}\n${penaltyPerDay > 0 ? `- Late Fee: ₱${(term.penaltyAmount || estimatedPenalty).toLocaleString()}\n- Total Amount Due: ₱${totalAmountDue.toLocaleString()}\n` : ''}- Due Date: ${termDueDate.toLocaleDateString()}\n\nPlease make your payment immediately to avoid additional penalties.\n\nBest regards,\nGlan Credible and Capital Inc.`
-
-        try {
-          const smsSent = await sendSMS(term.loan.user.phone, overdueMessage, term.loan.userId)
-          
-          if (smsSent) {
-            // Only update flag if SMS was actually sent (not skipped)
-            // Update status to 1 (sent) and update timestamp
-            await (prisma as any).loanTerm.update({
-              where: { id: term.id },
-              data: { 
-                overdueSmsSent: 1,
-                status: "OVERDUE", // Also update term status to OVERDUE
-                updatedAt: new Date() // Update timestamp to track when notification was sent
-              }
-            })
-            
-            console.log(`[SMS Notifications] ✅ Sent overdue notification for term ${term.id} (${daysOverdue} days overdue)`)
-            results.overdueNotifications++
-          } else {
-            console.log(`[SMS Notifications] ⚠️ SMS skipped for overdue term ${term.id} (SMS not configured or inactive)`)
-            results.errors.push(`SMS skipped for overdue term ${term.id}: SMS settings not configured or inactive`)
+        // Check if notification already exists for this term today
+        const todayStart = new Date(today)
+        todayStart.setHours(0, 0, 0, 0)
+        const todayEnd = new Date(today)
+        todayEnd.setHours(23, 59, 59, 999)
+        
+        const existingNotification = await prisma.notification.findFirst({
+          where: {
+            userId: term.loan.userId,
+            type: "PAYMENT_OVERDUE",
+            entityType: "LOAN_TERM",
+            entityId: term.id,
+            createdAt: {
+              gte: todayStart,
+              lte: todayEnd
+            }
           }
-        } catch (error: any) {
-          console.error(`[SMS Notifications] ❌ Failed to send overdue notification for term ${term.id}:`, error)
-          results.errors.push(`Failed to send overdue notification for term ${term.id}: ${error.message}`)
+        })
+
+        // Only create notification if one doesn't exist for today
+        if (!existingNotification) {
+          const overdueMessage = `Dear ${term.loan.user.name},\n\n⚠️ URGENT: Your payment for Term ${term.termNumber} (${monthName} ${year}) is OVERDUE!\n\nPayment Details:\n- Loan ID: ${term.loanId}\n- Term Number: ${term.termNumber}\n- Amount Due: ₱${formatCurrencyPlain(amountDue)}\n- Days Overdue: ${daysOverdue}\n${penaltyPerDay > 0 ? `- Late Fee: ₱${formatCurrencyPlain(term.penaltyAmount || estimatedPenalty)}\n- Total Amount Due: ₱${formatCurrencyPlain(totalAmountDue)}\n` : ''}- Due Date: ${termDueDate.toLocaleDateString()}\n\nPlease make your payment immediately to avoid additional penalties.\n\nBest regards,\nGlan Credible and Capital Inc.`
+
+          try {
+            // Create in-app notification for borrower (only once per day)
+            console.log(`[SMS Notifications] Creating overdue notification for term ${term.id}, user ${term.loan.userId}`)
+            const notification = await createNotification({
+              userId: term.loan.userId,
+              type: "PAYMENT_OVERDUE",
+              title: `⚠️ Payment Overdue - ${daysOverdue} Day${daysOverdue !== 1 ? 's' : ''}`,
+              message: `Your payment for Term ${term.termNumber} (${monthName} ${year}) is ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} overdue. Amount due: ₱${formatCurrencyPlain(amountDue)}${penaltyPerDay > 0 ? ` + Late fee: ₱${formatCurrencyPlain(term.penaltyAmount || estimatedPenalty)}` : ''}`,
+              link: `/dashboard/loans/${term.loanId}`,
+              entityType: "LOAN_TERM",
+              entityId: term.id
+            })
+
+            if (notification) {
+              console.log(`[SMS Notifications] ✅ Created overdue notification ${notification.id} for term ${term.id}`)
+            } else {
+              console.error(`[SMS Notifications] ❌ Failed to create overdue notification for term ${term.id} - createNotification returned null`)
+            }
+
+            // Try to send SMS
+            const smsSent = await sendSMS(term.loan.user.phone, overdueMessage, term.loan.userId)
+            
+            if (smsSent) {
+              // Only update flag if SMS was actually sent (not skipped)
+              // Update status to 1 (sent) and update timestamp
+              await (prisma as any).loanTerm.update({
+                where: { id: term.id },
+                data: { 
+                  overdueSmsSent: 1,
+                  status: "OVERDUE", // Also update term status to OVERDUE
+                  updatedAt: new Date() // Update timestamp to track when notification was sent
+                }
+              })
+              
+              console.log(`[SMS Notifications] ✅ Sent overdue notification for term ${term.id} (${daysOverdue} days overdue)`)
+              results.overdueNotifications++
+            } else {
+              console.log(`[SMS Notifications] ⚠️ SMS skipped for overdue term ${term.id} (SMS not configured or inactive), but notification created`)
+              results.errors.push(`SMS skipped for overdue term ${term.id}: SMS settings not configured or inactive`)
+            }
+          } catch (error: any) {
+            console.error(`[SMS Notifications] ❌ Failed to send overdue notification for term ${term.id}:`, error)
+            results.errors.push(`Failed to send overdue notification for term ${term.id}: ${error.message}`)
+          }
+        } else {
+          console.log(`[SMS Notifications] ⏭️ Skipping overdue notification for term ${term.id} - already sent today`)
         }
       }
     }

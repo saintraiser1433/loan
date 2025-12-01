@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Star, Wallet } from "lucide-react"
+import { NotificationBell } from "@/components/notification-bell"
+import { formatCurrency } from "@/lib/utils"
 
 export function DashboardLayout({
   children,
@@ -67,12 +69,13 @@ export function DashboardLayout({
                   <Wallet className="h-4 w-4 text-blue-500" />
                   <span className="text-xs sm:text-sm font-medium">
                     <span className="text-muted-foreground hidden sm:inline">Limit:</span>{" "}
-                    <span className="font-semibold">₱{creditInfo.loanLimit.toLocaleString()}</span>
+                    <span className="font-semibold">{formatCurrency(creditInfo.loanLimit)}</span>
                   </span>
                 </div>
                 <Separator orientation="vertical" className="h-4 hidden lg:block" />
               </>
             )}
+            <NotificationBell />
             <ThemeToggle />
           </div>
         </header>

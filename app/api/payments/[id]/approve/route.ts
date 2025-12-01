@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { logActivity, getClientIp, getUserAgent } from "@/lib/activity-log"
 import { sendSMS } from "@/lib/sms"
+import { createNotification } from "@/lib/notifications"
+import { formatCurrencyPlain } from "@/lib/utils"
 
 export async function POST(
   request: Request,
@@ -198,6 +200,17 @@ export async function POST(
             loanLimit: newLoanLimit
           }
         })
+
+        // Create notification for borrower about loan completion
+        await createNotification({
+          userId: payment.userId,
+          type: "LOAN_COMPLETED",
+          title: "Loan Completed! 🎉",
+          message: `Congratulations! Your loan of ₱${formatCurrencyPlain(loan.principalAmount)} has been fully paid. Your credit score has increased by ${creditScoreIncrease} points.`,
+          link: `/dashboard/loans/${payment.loanId}`,
+          entityType: "LOAN",
+          entityId: payment.loanId
+        })
       }
     }
 
@@ -207,7 +220,7 @@ export async function POST(
       action: "APPROVE_PAYMENT",
       entityType: "PAYMENT",
       entityId: id,
-      description: `Approved payment of ₱${payment.amount.toLocaleString()} for loan ${payment.loanId}`,
+      description: `Approved payment of ₱${formatCurrencyPlain(payment.amount)} for loan ${payment.loanId}`,
       metadata: { 
         amount: payment.amount, 
         loanId: payment.loanId,
@@ -217,27 +230,37 @@ export async function POST(
       userAgent: getUserAgent(request),
     })
 
+    // Get payment month from term dueDate (used for both SMS and notification)
+    const paymentType = (payment as any).paymentType || "FULL"
+    let monthText = ""
+    if (payment.term && payment.term.dueDate) {
+      const dueDate = new Date(payment.term.dueDate)
+      const monthNames = ["January", "February", "March", "April", "May", "June", 
+                         "July", "August", "September", "October", "November", "December"]
+      const monthName = monthNames[dueDate.getMonth()]
+      const year = dueDate.getFullYear()
+      monthText = ` for the month of ${monthName} ${year}`
+    }
+
     // Send approval SMS to borrower
     if (borrowerPhone && borrowerName) {
-      const paymentType = (payment as any).paymentType || "FULL"
-      
-      // Get payment month from term dueDate
-      let monthText = ""
-      if (payment.term && payment.term.dueDate) {
-        const dueDate = new Date(payment.term.dueDate)
-        const monthNames = ["January", "February", "March", "April", "May", "June", 
-                           "July", "August", "September", "October", "November", "December"]
-        const monthName = monthNames[dueDate.getMonth()]
-        const year = dueDate.getFullYear()
-        monthText = ` for the month of ${monthName} ${year}`
-      }
-      
-      const approvalMessage = `Dear ${borrowerName},\n\nWe are pleased to inform you that your ${paymentType.toLowerCase()} payment of ₱${payment.amount.toLocaleString()}${monthText} has been APPROVED.\n\nLoan ID: ${payment.loanId}\nRemaining Balance: ₱${newRemainingAmount.toLocaleString()}\n\nThank you for your timely payment. We appreciate your continued trust in our services.\n\nBest regards,\nGlan Credible and Capital Inc.`
+      const approvalMessage = `Dear ${borrowerName},\n\nWe are pleased to inform you that your ${paymentType.toLowerCase()} payment of ₱${formatCurrencyPlain(payment.amount)}${monthText} has been APPROVED.\n\nLoan ID: ${payment.loanId}\nRemaining Balance: ₱${formatCurrencyPlain(newRemainingAmount)}\n\nThank you for your timely payment. We appreciate your continued trust in our services.\n\nBest regards,\nGlan Credible and Capital Inc.`
       
       await sendSMS(borrowerPhone, approvalMessage, payment.userId).catch((error) => {
         console.error("Failed to send payment approval SMS:", error)
       })
     }
+
+    // Create notification for borrower
+    await createNotification({
+      userId: payment.userId,
+      type: "PAYMENT_APPROVED",
+      title: "Payment Approved",
+      message: `Your payment of ₱${formatCurrencyPlain(payment.amount)}${monthText} has been approved. Remaining balance: ₱${formatCurrencyPlain(newRemainingAmount)}`,
+      link: `/dashboard/loans/${payment.loanId}`,
+      entityType: "PAYMENT",
+      entityId: id
+    })
 
     return NextResponse.json({ 
       message: "Payment approved successfully",

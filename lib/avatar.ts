@@ -10,3 +10,5 @@ export function getDiceBearAvatar(seed: string): string {
   return `https://api.dicebear.com/8.x/avataaars-neutral/svg?seed=${encodeURIComponent(avatarSeed)}`
 }
 
+
+

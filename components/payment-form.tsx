@@ -24,6 +24,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { AlertTriangle } from "lucide-react"
+import { formatCurrency } from "@/lib/utils"
 
 type PaymentMethod = {
   id: string
@@ -198,7 +199,7 @@ export function PaymentForm({
       toast({
         variant: "destructive",
         title: "Amount exceeds balance",
-        description: `Maximum payment for this term is ₱${totalWithPenalty.toLocaleString()}.`,
+        description: `Maximum payment for this term is ${formatCurrency(totalWithPenalty)}.`,
       })
       return
     }
@@ -311,21 +312,21 @@ export function PaymentForm({
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Original amount</span>
           <span className="text-lg font-semibold">
-            ₱{nextTerm.amount.toLocaleString()}
+            {formatCurrency(nextTerm.amount)}
           </span>
         </div>
 
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Already paid</span>
           <span className="text-sm font-medium">
-            ₱{nextTerm.amountPaid.toLocaleString()}
+            {formatCurrency(nextTerm.amountPaid)}
           </span>
         </div>
 
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Base balance</span>
           <span className="text-sm font-medium">
-            ₱{baseBalance.toLocaleString()}
+            {formatCurrency(baseBalance)}
           </span>
         </div>
 
@@ -337,8 +338,8 @@ export function PaymentForm({
               <span className="font-semibold text-sm">OVERDUE - {daysLate} day{daysLate !== 1 ? 's' : ''} late</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Late fee (₱{penaltyPerDay.toLocaleString()}/day × {daysLate} days)</span>
-              <span className="font-semibold text-destructive">+₱{penaltyAmount.toLocaleString()}</span>
+              <span className="text-muted-foreground">Late fee ({formatCurrency(penaltyPerDay)}/day × {daysLate} days)</span>
+              <span className="font-semibold text-destructive">+{formatCurrency(penaltyAmount)}</span>
             </div>
           </div>
         )}
@@ -346,14 +347,14 @@ export function PaymentForm({
         <div className="flex items-center justify-between border-t pt-2">
           <span className="text-base font-semibold">Total amount due</span>
           <span className="text-xl font-bold text-primary">
-            ₱{totalWithPenalty.toLocaleString()}
+            {formatCurrency(totalWithPenalty)}
           </span>
         </div>
 
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Remaining loan balance</span>
           <span className="text-sm font-medium">
-            ₱{Math.max(remainingAmount + penaltyAmount, 0).toLocaleString()}
+            {formatCurrency(Math.max(remainingAmount + penaltyAmount, 0))}
           </span>
         </div>
       </section>
@@ -415,8 +416,8 @@ export function PaymentForm({
         />
         <p className="text-xs text-muted-foreground">
           {paymentType === "FULL" 
-            ? `Full payment: ₱${totalWithPenalty.toLocaleString()}${isOverdue ? ' (includes late fee)' : ''}`
-            : `Maximum: ₱${totalWithPenalty.toLocaleString()}`}
+            ? `Full payment: ${formatCurrency(totalWithPenalty)}${isOverdue ? ' (includes late fee)' : ''}`
+            : `Maximum: ${formatCurrency(totalWithPenalty)}`}
         </p>
       </div>
 
@@ -485,14 +486,14 @@ export function PaymentForm({
                 </div>
                 <div className="flex justify-between text-destructive">
                   <span>Late fee</span>
-                  <span className="font-semibold">₱{penaltyAmount.toLocaleString()}</span>
+                  <span className="font-semibold">{formatCurrency(penaltyAmount)}</span>
                 </div>
               </>
             )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Amount</span>
               <span className="font-semibold">
-                ₱{(paymentType === "FULL" ? totalWithPenalty : parseFloat(partialAmount || "0")).toLocaleString()}
+                {formatCurrency(paymentType === "FULL" ? totalWithPenalty : parseFloat(partialAmount || "0"))}
               </span>
             </div>
             <div className="flex justify-between">

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { useSession } from "next-auth/react"
 import { redirect } from "next/navigation"
+import { formatCurrency } from "@/lib/utils"
 
 interface LoanType {
   id: string
@@ -16,6 +17,8 @@ interface LoanType {
   minAmount: number
   maxAmount: number
   creditScoreRequired: number
+  creditScoreOnCompletion: number
+  limitIncreaseOnCompletion: number
 }
 
 interface BorrowerCredit {
@@ -223,19 +226,27 @@ export default function ApplyPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Interest Rate:</span>
-                    <span className="font-medium">{loanType.interestRate}%</span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Amount Range:</span>
                     <span className="font-medium">
-                      ₱{loanType.minAmount.toLocaleString()} - ₱{loanType.maxAmount.toLocaleString()}
+                      {formatCurrency(loanType.minAmount)} - {formatCurrency(loanType.maxAmount)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Credit Score Required:</span>
                     <span className="font-medium">{loanType.creditScoreRequired}%</span>
                   </div>
+                  {loanType.creditScoreOnCompletion > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Credit Score Increase:</span>
+                      <span className="font-medium text-green-600">+{loanType.creditScoreOnCompletion}%</span>
+                    </div>
+                  )}
+                  {loanType.limitIncreaseOnCompletion > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Limit Increase on Completion:</span>
+                      <span className="font-medium text-green-600">+{formatCurrency(loanType.limitIncreaseOnCompletion)}</span>
+                    </div>
+                  )}
                 </div>
                 <Button
                   onClick={() => handleSelectLoanType(loanType.id)}
@@ -249,7 +260,7 @@ export default function ApplyPage() {
                     borrowerCredit && !borrowerCredit.canApply
                       ? restrictionReason
                       : borrowerCredit && borrowerCredit.availableCredit < loanType.minAmount
-                      ? `Insufficient credit. Available: ₱${borrowerCredit.availableCredit.toLocaleString()}, Required: ₱${loanType.minAmount.toLocaleString()}`
+                      ? `Insufficient credit. Available: ${formatCurrency(borrowerCredit.availableCredit)}, Required: ${formatCurrency(loanType.minAmount)}`
                       : undefined
                   }
                 >
@@ -261,7 +272,7 @@ export default function ApplyPage() {
                 </Button>
                 {borrowerCredit && borrowerCredit.availableCredit < loanType.minAmount && (
                   <p className="text-xs text-muted-foreground mt-1 text-center">
-                    Available credit: ₱{borrowerCredit.availableCredit.toLocaleString()}
+                    Available credit: {formatCurrency(borrowerCredit.availableCredit)}
                   </p>
                 )}
               </CardContent>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import dynamic from "next/dynamic"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { 
   AlertCircle, 
@@ -17,23 +18,9 @@ import {
   ArrowDownRight,
   PieChart as PieChartIcon
 } from "lucide-react"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  Legend,
-  Area,
-  AreaChart
-} from "recharts"
+
+// Dynamically import ApexCharts to avoid SSR issues
+const Chart = dynamic(() => import("react-apexcharts"), { ssr: false })
 
 type Role = "BORROWER" | "LOAN_OFFICER" | "ADMIN" | string
 
@@ -236,33 +223,62 @@ export function AnalyticsDashboard({ role }: { role: Role }) {
             </CardHeader>
             <CardContent>
               <div className="h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
+                <Chart
+                  type="donut"
+                  height={250}
+                  series={(() => {
+                    const data = [
+                      { name: 'Approved', value: borrowerData.totalApproved, color: '#10b981' },
+                      { name: 'Rejected', value: borrowerData.totalRejected, color: '#ef4444' },
+                      { name: 'Pending', value: borrowerData.totalApplications - borrowerData.totalApproved - borrowerData.totalRejected, color: '#f59e0b' }
+                    ].filter(d => d.value > 0)
+                    return data.map(d => d.value)
+                  })()}
+                  options={{
+                    chart: {
+                      type: 'donut',
+                    },
+                    labels: (() => {
+                      const data = [
                         { name: 'Approved', value: borrowerData.totalApproved, color: '#10b981' },
                         { name: 'Rejected', value: borrowerData.totalRejected, color: '#ef4444' },
                         { name: 'Pending', value: borrowerData.totalApplications - borrowerData.totalApproved - borrowerData.totalRejected, color: '#f59e0b' }
-                      ].filter(d => d.value > 0)}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}`}
-                    >
-                      {[
+                      ].filter(d => d.value > 0)
+                      return data.map(d => d.name)
+                    })(),
+                    colors: (() => {
+                      const data = [
                         { name: 'Approved', value: borrowerData.totalApproved, color: '#10b981' },
                         { name: 'Rejected', value: borrowerData.totalRejected, color: '#ef4444' },
                         { name: 'Pending', value: borrowerData.totalApplications - borrowerData.totalApproved - borrowerData.totalRejected, color: '#f59e0b' }
-                      ].filter(d => d.value > 0).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value}`, 'Count']} />
-                  </PieChart>
-                </ResponsiveContainer>
+                      ].filter(d => d.value > 0)
+                      return data.map(d => d.color)
+                    })(),
+                    legend: {
+                      position: 'bottom',
+                    },
+                    plotOptions: {
+                      pie: {
+                        donut: {
+                          size: '60%',
+                        },
+                      },
+                    },
+                    dataLabels: {
+                      enabled: true,
+                      formatter: function (val: number, opts: any) {
+                        return opts.w.config.series[opts.seriesIndex]
+                      },
+                    },
+                    tooltip: {
+                      y: {
+                        formatter: function (val: number) {
+                          return val + ' applications'
+                        },
+                      },
+                    },
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
@@ -311,18 +327,70 @@ export function AnalyticsDashboard({ role }: { role: Role }) {
               </CardHeader>
               <CardContent>
                 <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={borrowerData.monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="month" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="approved" name="Approved" fill="#10b981" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="pending" name="Pending" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="rejected" name="Rejected" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <Chart
+                    type="bar"
+                    height={250}
+                    series={[
+                      {
+                        name: 'Approved',
+                        data: borrowerData.monthlyData.map(d => d.approved),
+                      },
+                      {
+                        name: 'Pending',
+                        data: borrowerData.monthlyData.map(d => d.pending),
+                      },
+                      {
+                        name: 'Rejected',
+                        data: borrowerData.monthlyData.map(d => d.rejected),
+                      },
+                    ]}
+                    options={{
+                      chart: {
+                        type: 'bar',
+                        toolbar: {
+                          show: false,
+                        },
+                      },
+                      xaxis: {
+                        categories: borrowerData.monthlyData.map(d => d.month),
+                        labels: {
+                          style: {
+                            fontSize: '12px',
+                          },
+                        },
+                      },
+                      yaxis: {
+                        labels: {
+                          style: {
+                            fontSize: '12px',
+                          },
+                        },
+                      },
+                      colors: ['#10b981', '#f59e0b', '#ef4444'],
+                      plotOptions: {
+                        bar: {
+                          borderRadius: 4,
+                          columnWidth: '60%',
+                        },
+                      },
+                      dataLabels: {
+                        enabled: false,
+                      },
+                      legend: {
+                        position: 'top',
+                      },
+                      grid: {
+                        strokeDashArray: 3,
+                      },
+                      tooltip: {
+                        y: {
+                          formatter: function (val: number) {
+                            return val + ' applications'
+                          },
+                        },
+                      },
+                    }}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -453,26 +521,41 @@ export function AnalyticsDashboard({ role }: { role: Role }) {
             </CardHeader>
             <CardContent>
               <div className="h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={adminData.loanStatusDistribution.filter(d => d.count > 0)}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="count"
-                      nameKey="status"
-                      label={({ name, value }) => `${name}: ${value}`}
-                    >
-                      {adminData.loanStatusDistribution.filter(d => d.count > 0).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.status] || COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value}`, 'Loans']} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Chart
+                  type="donut"
+                  height={250}
+                  series={adminData.loanStatusDistribution.filter(d => d.count > 0).map(d => d.count)}
+                  options={{
+                    chart: {
+                      type: 'donut',
+                    },
+                    labels: adminData.loanStatusDistribution.filter(d => d.count > 0).map(d => d.status),
+                    colors: adminData.loanStatusDistribution.filter(d => d.count > 0).map(d => STATUS_COLORS[d.status] || COLORS[0]),
+                    legend: {
+                      position: 'bottom',
+                    },
+                    plotOptions: {
+                      pie: {
+                        donut: {
+                          size: '60%',
+                        },
+                      },
+                    },
+                    dataLabels: {
+                      enabled: true,
+                      formatter: function (val: number, opts: any) {
+                        return opts.w.config.series[opts.seriesIndex]
+                      },
+                    },
+                    tooltip: {
+                      y: {
+                        formatter: function (val: number) {
+                          return val + ' loans'
+                        },
+                      },
+                    },
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
@@ -485,26 +568,41 @@ export function AnalyticsDashboard({ role }: { role: Role }) {
             </CardHeader>
             <CardContent>
               <div className="h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={adminData.applicationStatusDistribution.filter(d => d.count > 0)}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="count"
-                      nameKey="status"
-                      label={({ name, value }) => `${name}: ${value}`}
-                    >
-                      {adminData.applicationStatusDistribution.filter(d => d.count > 0).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.status] || COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value}`, 'Applications']} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Chart
+                  type="donut"
+                  height={250}
+                  series={adminData.applicationStatusDistribution.filter(d => d.count > 0).map(d => d.count)}
+                  options={{
+                    chart: {
+                      type: 'donut',
+                    },
+                    labels: adminData.applicationStatusDistribution.filter(d => d.count > 0).map(d => d.status),
+                    colors: adminData.applicationStatusDistribution.filter(d => d.count > 0).map(d => STATUS_COLORS[d.status] || COLORS[0]),
+                    legend: {
+                      position: 'bottom',
+                    },
+                    plotOptions: {
+                      pie: {
+                        donut: {
+                          size: '60%',
+                        },
+                      },
+                    },
+                    dataLabels: {
+                      enabled: true,
+                      formatter: function (val: number, opts: any) {
+                        return opts.w.config.series[opts.seriesIndex]
+                      },
+                    },
+                    tooltip: {
+                      y: {
+                        formatter: function (val: number) {
+                          return val + ' applications'
+                        },
+                      },
+                    },
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
@@ -518,15 +616,60 @@ export function AnalyticsDashboard({ role }: { role: Role }) {
               </CardHeader>
               <CardContent>
                 <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={adminData.loanTypeDistribution} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis type="number" className="text-xs" />
-                      <YAxis dataKey="name" type="category" className="text-xs" width={100} />
-                      <Tooltip formatter={(value: number) => [`${value}`, 'Loans']} />
-                      <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <Chart
+                    type="bar"
+                    height={250}
+                    series={[
+                      {
+                        name: 'Loans',
+                        data: adminData.loanTypeDistribution.map(d => d.count),
+                      },
+                    ]}
+                    options={{
+                      chart: {
+                        type: 'bar',
+                        toolbar: {
+                          show: false,
+                        },
+                        horizontal: true,
+                      },
+                      xaxis: {
+                        categories: adminData.loanTypeDistribution.map(d => d.name),
+                        labels: {
+                          style: {
+                            fontSize: '12px',
+                          },
+                        },
+                      },
+                      yaxis: {
+                        labels: {
+                          style: {
+                            fontSize: '12px',
+                          },
+                        },
+                      },
+                      colors: ['#3b82f6'],
+                      plotOptions: {
+                        bar: {
+                          borderRadius: 4,
+                          horizontal: true,
+                        },
+                      },
+                      dataLabels: {
+                        enabled: false,
+                      },
+                      grid: {
+                        strokeDashArray: 3,
+                      },
+                      tooltip: {
+                        y: {
+                          formatter: function (val: number) {
+                            return val + ' loans'
+                          },
+                        },
+                      },
+                    }}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -541,22 +684,69 @@ export function AnalyticsDashboard({ role }: { role: Role }) {
               </CardHeader>
               <CardContent>
                 <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={adminData.monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="month" className="text-xs" />
-                      <YAxis className="text-xs" tickFormatter={(value) => `₱${(value/1000).toFixed(0)}k`} />
-                      <Tooltip formatter={(value: number) => [`₱${value.toLocaleString()}`, 'Amount']} />
-                      <Area 
-                        type="monotone" 
-                        dataKey="paymentAmount" 
-                        name="Collections"
-                        stroke="#10b981" 
-                        fill="#10b981" 
-                        fillOpacity={0.3}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <Chart
+                    type="area"
+                    height={250}
+                    series={[
+                      {
+                        name: 'Collections',
+                        data: adminData.monthlyData.map(d => d.paymentAmount),
+                      },
+                    ]}
+                    options={{
+                      chart: {
+                        type: 'area',
+                        toolbar: {
+                          show: false,
+                        },
+                      },
+                      xaxis: {
+                        categories: adminData.monthlyData.map(d => d.month),
+                        labels: {
+                          style: {
+                            fontSize: '12px',
+                          },
+                        },
+                      },
+                      yaxis: {
+                        labels: {
+                          style: {
+                            fontSize: '12px',
+                          },
+                          formatter: function (val: number) {
+                            return '₱' + (val / 1000).toFixed(0) + 'k'
+                          },
+                        },
+                      },
+                      colors: ['#10b981'],
+                      fill: {
+                        type: 'gradient',
+                        gradient: {
+                          shadeIntensity: 1,
+                          opacityFrom: 0.3,
+                          opacityTo: 0.1,
+                          stops: [0, 90, 100],
+                        },
+                      },
+                      stroke: {
+                        curve: 'smooth',
+                        width: 2,
+                      },
+                      dataLabels: {
+                        enabled: false,
+                      },
+                      grid: {
+                        strokeDashArray: 3,
+                      },
+                      tooltip: {
+                        y: {
+                          formatter: function (val: number) {
+                            return '₱' + val.toLocaleString()
+                          },
+                        },
+                      },
+                    }}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -571,18 +761,70 @@ export function AnalyticsDashboard({ role }: { role: Role }) {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={adminData.monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="month" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="applications" name="Applications" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="approved" name="Approved" fill="#10b981" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="loans" name="Loans Created" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <Chart
+                    type="bar"
+                    height={300}
+                    series={[
+                      {
+                        name: 'Applications',
+                        data: adminData.monthlyData.map(d => d.applications),
+                      },
+                      {
+                        name: 'Approved',
+                        data: adminData.monthlyData.map(d => d.approved),
+                      },
+                      {
+                        name: 'Loans Created',
+                        data: adminData.monthlyData.map(d => d.loans),
+                      },
+                    ]}
+                    options={{
+                      chart: {
+                        type: 'bar',
+                        toolbar: {
+                          show: false,
+                        },
+                      },
+                      xaxis: {
+                        categories: adminData.monthlyData.map(d => d.month),
+                        labels: {
+                          style: {
+                            fontSize: '12px',
+                          },
+                        },
+                      },
+                      yaxis: {
+                        labels: {
+                          style: {
+                            fontSize: '12px',
+                          },
+                        },
+                      },
+                      colors: ['#8b5cf6', '#10b981', '#3b82f6'],
+                      plotOptions: {
+                        bar: {
+                          borderRadius: 4,
+                          columnWidth: '60%',
+                        },
+                      },
+                      dataLabels: {
+                        enabled: false,
+                      },
+                      legend: {
+                        position: 'top',
+                      },
+                      grid: {
+                        strokeDashArray: 3,
+                      },
+                      tooltip: {
+                        y: {
+                          formatter: function (val: number) {
+                            return val.toString()
+                          },
+                        },
+                      },
+                    }}
+                  />
                 </div>
               </CardContent>
             </Card>

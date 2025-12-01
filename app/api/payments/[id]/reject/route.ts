@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { logActivity, getClientIp, getUserAgent } from "@/lib/activity-log"
 import { sendSMS } from "@/lib/sms"
+import { createNotification } from "@/lib/notifications"
+import { formatCurrencyPlain } from "@/lib/utils"
 
 export async function POST(
   request: Request,
@@ -82,7 +84,7 @@ export async function POST(
       action: "REJECT_PAYMENT",
       entityType: "PAYMENT",
       entityId: id,
-      description: `Rejected payment of ₱${payment.amount.toLocaleString()} for loan ${payment.loanId}`,
+      description: `Rejected payment of ₱${formatCurrencyPlain(payment.amount)} for loan ${payment.loanId}`,
       metadata: { 
         amount: payment.amount, 
         loanId: payment.loanId,
@@ -92,25 +94,36 @@ export async function POST(
       userAgent: getUserAgent(request),
     })
 
+    // Get payment month from term dueDate (used for both SMS and notification)
+    let monthText = ""
+    if (payment.term && payment.term.dueDate) {
+      const dueDate = new Date(payment.term.dueDate)
+      const monthNames = ["January", "February", "March", "April", "May", "June", 
+                         "July", "August", "September", "October", "November", "December"]
+      const monthName = monthNames[dueDate.getMonth()]
+      const year = dueDate.getFullYear()
+      monthText = ` for the month of ${monthName} ${year}`
+    }
+
     // Send rejection SMS to borrower
     if (payment.loan.user?.phone) {
-      // Get payment month from term dueDate
-      let monthText = ""
-      if (payment.term && payment.term.dueDate) {
-        const dueDate = new Date(payment.term.dueDate)
-        const monthNames = ["January", "February", "March", "April", "May", "June", 
-                           "July", "August", "September", "October", "November", "December"]
-        const monthName = monthNames[dueDate.getMonth()]
-        const year = dueDate.getFullYear()
-        monthText = ` for the month of ${monthName} ${year}`
-      }
-      
-      const rejectionMessage = `Dear ${payment.loan.user.name},\n\nWe regret to inform you that your payment of ₱${payment.amount.toLocaleString()}${monthText} has been REJECTED.\n\nReason: ${rejectionReason.trim()}\n\nLoan ID: ${payment.loanId}\n\nPlease contact us at your earliest convenience for assistance in resolving this matter.\n\nBest regards,\nGlan Credible and Capital Inc.`
+      const rejectionMessage = `Dear ${payment.loan.user.name},\n\nWe regret to inform you that your payment of ₱${formatCurrencyPlain(payment.amount)}${monthText} has been REJECTED.\n\nReason: ${rejectionReason.trim()}\n\nLoan ID: ${payment.loanId}\n\nPlease contact us at your earliest convenience for assistance in resolving this matter.\n\nBest regards,\nGlan Credible and Capital Inc.`
       
       await sendSMS(payment.loan.user.phone, rejectionMessage, payment.userId).catch((error) => {
         console.error("Failed to send payment rejection SMS:", error)
       })
     }
+
+    // Create notification for borrower
+    await createNotification({
+      userId: payment.userId,
+      type: "PAYMENT_REJECTED",
+      title: "Payment Rejected",
+      message: `Your payment of ₱${formatCurrencyPlain(payment.amount)}${monthText} has been rejected. Reason: ${rejectionReason.trim()}`,
+      link: `/dashboard/loans/${payment.loanId}`,
+      entityType: "PAYMENT",
+      entityId: id
+    })
 
     return NextResponse.json({ 
       message: "Payment rejected successfully"

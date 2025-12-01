@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { formatCurrencyPlain } from "@/lib/utils"
+import { createNotificationForAdmins } from "@/lib/notifications"
 
 export async function POST(request: Request) {
   try {
@@ -96,7 +98,7 @@ export async function POST(request: Request) {
       // Allow 1 peso tolerance for floating point differences
       if (amount > totalAmountDue + 1) {
         return NextResponse.json(
-          { error: `Payment amount cannot exceed ₱${totalAmountDue.toLocaleString()} for this term (including late fees)` },
+          { error: `Payment amount cannot exceed ₱${formatCurrencyPlain(totalAmountDue)} for this term (including late fees)` },
           { status: 400 }
         )
       }
@@ -168,10 +170,39 @@ export async function POST(request: Request) {
         paymentMethodId: paymentMethodId || null,
         termId: termId || null,
         status: "PENDING",
+      },
+      include: {
+        user: true,
+        loan: {
+          include: {
+            user: true
+          }
+        }
       }
     })
     
     console.log("Payment created successfully:", payment.id)
+
+    // Create notification for admins/loan officers
+    const termInfo = termId ? loan.terms?.find((t: any) => t.id === termId) : null
+    let monthText = ""
+    if (termInfo && termInfo.dueDate) {
+      const dueDate = new Date(termInfo.dueDate)
+      const monthNames = ["January", "February", "March", "April", "May", "June", 
+                         "July", "August", "September", "October", "November", "December"]
+      const monthName = monthNames[dueDate.getMonth()]
+      const year = dueDate.getFullYear()
+      monthText = ` for ${monthName} ${year}`
+    }
+
+    await createNotificationForAdmins({
+      type: "PAYMENT_PENDING",
+      title: "New Payment Pending Approval",
+      message: `${payment.user.name} submitted a payment of ₱${formatCurrencyPlain(amount)}${monthText} for loan ${loanId.substring(0, 8)}...`,
+      link: `/dashboard/loans/${loanId}`,
+      entityType: "PAYMENT",
+      entityId: payment.id
+    })
     
     // Store termId in a separate update if needed (after Prisma client is regenerated)
     // For now, we'll fetch it from the request body when approving

@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/data-table"
+import { formatCurrency } from "@/lib/utils"
 
 interface LoanTerm {
   id: string
@@ -90,7 +91,7 @@ export default function LoansPage() {
     },
     {
       header: "Total Amount",
-      accessor: (row: Loan) => `₱${row.totalAmount.toLocaleString()}`,
+      accessor: (row: Loan) => formatCurrency(row.totalAmount),
     },
     {
       header: "Term Amount",
@@ -98,14 +99,14 @@ export default function LoansPage() {
         if (row.terms && row.terms.length > 0) {
           // Calculate average term amount (or show first term amount)
           const termAmount = row.terms[0]?.amount || 0
-          return `₱${termAmount.toLocaleString()}`
+          return formatCurrency(termAmount)
         }
         // Fallback: calculate from payment duration
         if (row.paymentDuration) {
           const match = row.paymentDuration.label.match(/(\d+)/)
           const numberOfMonths = match ? parseInt(match[1]) : 1
           const termAmount = row.totalAmount / numberOfMonths
-          return `₱${termAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          return formatCurrency(termAmount)
         }
         return "-"
       },
@@ -125,7 +126,7 @@ export default function LoansPage() {
           remaining = Math.max(0, row.remainingAmount)
         }
         
-        return `₱${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        return formatCurrency(remaining)
       },
     },
     {

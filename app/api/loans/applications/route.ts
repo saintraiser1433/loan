@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { validatePhilippinePhone } from "@/lib/phone-validation"
+import { createNotificationForAdmins } from "@/lib/notifications"
+import { formatCurrencyPlain } from "@/lib/utils"
 
 export async function POST(request: Request) {
   try {
@@ -189,6 +191,10 @@ export async function POST(request: Request) {
         requestedAmount,
         purposeDescription,
         status: "PENDING"
+      },
+      include: {
+        user: true,
+        loanType: true
       }
     })
 
@@ -211,6 +217,22 @@ export async function POST(request: Request) {
         })
       )
     )
+
+    // Create notification for admins/loan officers
+    try {
+      await createNotificationForAdmins({
+        type: "APPLICATION_PENDING",
+        title: "New Loan Application Submitted",
+        message: `${application.user.name} submitted a new loan application for ₱${formatCurrencyPlain(requestedAmount)} (${application.loanType.name})`,
+        link: `/dashboard/applications/${application.id}`,
+        entityType: "APPLICATION",
+        entityId: application.id
+      })
+      console.log(`[Application] Created notification for admins about application ${application.id}`)
+    } catch (notifError) {
+      console.error(`[Application] Failed to create notification for application ${application.id}:`, notifError)
+      // Don't fail the request if notification fails
+    }
 
     return NextResponse.json({ application }, { status: 201 })
   } catch (error) {

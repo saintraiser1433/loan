@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendSMS } from "@/lib/sms"
+import { createNotification } from "@/lib/notifications"
+import { formatCurrencyPlain } from "@/lib/utils"
 
 export async function POST(request: Request) {
   try {
@@ -182,12 +184,23 @@ export async function POST(request: Request) {
 
       // Send approval SMS
       if (application.user.phone) {
-        const approvalMessage = `Dear ${application.user.name},\n\nYour loan application has been APPROVED!\n\nLoan Details:\n- Amount: ₱${principalAmount.toLocaleString()}\n- Total Amount: ₱${totalAmount.toLocaleString()}\n- Payment Duration: ${application.paymentDuration.label}\n- Due Date: ${dueDate.toLocaleDateString()}\n\nThank you for choosing GCCI Lending!\n\nGlan Credible and Capital Inc.`
+        const approvalMessage = `Dear ${application.user.name},\n\nYour loan application has been APPROVED!\n\nLoan Details:\n- Amount: ₱${formatCurrencyPlain(principalAmount)}\n- Total Amount: ₱${formatCurrencyPlain(totalAmount)}\n- Payment Duration: ${application.paymentDuration.label}\n- Due Date: ${dueDate.toLocaleDateString()}\n\nThank you for choosing GCCI Lending!\n\nGlan Credible and Capital Inc.`
         await sendSMS(application.user.phone, approvalMessage, application.userId).catch((error) => {
           console.error("Failed to send approval SMS:", error)
           // Don't fail the request if SMS fails
         })
       }
+
+      // Create notification for borrower
+      await createNotification({
+        userId: application.userId,
+        type: "LOAN_APPROVED",
+        title: "Loan Application Approved",
+        message: `Your loan application has been approved! Amount: ₱${formatCurrencyPlain(principalAmount)}, Total: ₱${formatCurrencyPlain(totalAmount)}`,
+        link: `/dashboard/loans/${loan.id}`,
+        entityType: "LOAN",
+        entityId: loan.id
+      })
     }
 
     // If rejected, send SMS
@@ -199,6 +212,19 @@ export async function POST(request: Request) {
       await sendSMS(application.user.phone, rejectionMessage, application.userId).catch((error) => {
         console.error("Failed to send rejection SMS:", error)
         // Don't fail the request if SMS fails
+      })
+
+      // Create notification for borrower
+      await createNotification({
+        userId: application.userId,
+        type: "LOAN_REJECTED",
+        title: "Loan Application Rejected",
+        message: rejectionReason
+          ? `Your loan application has been rejected. Reason: ${rejectionReason}`
+          : `Your loan application has been rejected. Please contact us for more information.`,
+        link: `/dashboard/applications/my`,
+        entityType: "APPLICATION",
+        entityId: applicationId
       })
     }
 
