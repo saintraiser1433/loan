@@ -40,6 +40,8 @@ const getNotificationIcon = (type: string) => {
       return <XCircle className="h-5 w-5 text-red-600" />
     case "APPLICATION_PENDING":
       return <FileText className="h-5 w-5 text-blue-600" />
+    case "BORROWER_PENDING":
+      return <FileText className="h-5 w-5 text-purple-600" />
     case "LOAN_APPROVED":
       return <FileCheck className="h-5 w-5 text-green-500" />
     case "LOAN_REJECTED":

@@ -135,7 +135,7 @@ export function LoanTypeForm({ loanType, onSuccess }: LoanTypeFormProps) {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
-    if (!name || !minAmount || !maxAmount || !creditScoreRequired) {
+    if (!name || minAmount === undefined || minAmount === null || minAmount === "" || maxAmount === undefined || maxAmount === null || maxAmount === "" || creditScoreRequired === undefined || creditScoreRequired === null || creditScoreRequired === "") {
       toast({
         variant: "destructive",
         title: "Validation error",
@@ -152,16 +152,16 @@ export function LoanTypeForm({ loanType, onSuccess }: LoanTypeFormProps) {
       toast({
         variant: "destructive",
         title: "Invalid minimum amount",
-        description: "Minimum amount must be a positive number.",
+        description: "Minimum amount must be 0 or greater.",
       })
       return
     }
 
-    if (Number.isNaN(max) || max <= min) {
+    if (Number.isNaN(max) || max < min) {
       toast({
         variant: "destructive",
         title: "Invalid maximum amount",
-        description: "Maximum amount must be greater than minimum amount.",
+        description: "Maximum amount must be greater than or equal to minimum amount.",
       })
       return
     }
@@ -212,15 +212,54 @@ export function LoanTypeForm({ loanType, onSuccess }: LoanTypeFormProps) {
     try {
       setLoading(true)
 
+      // Parse optional fields, allowing 0 values
+      const creditScoreOnCompletionValue = creditScoreOnCompletion !== undefined && creditScoreOnCompletion !== null && creditScoreOnCompletion !== ""
+        ? Number(creditScoreOnCompletion)
+        : 5
+      const limitIncreaseOnCompletionValue = limitIncreaseOnCompletion !== undefined && limitIncreaseOnCompletion !== null && limitIncreaseOnCompletion !== ""
+        ? Number(limitIncreaseOnCompletion)
+        : 0
+      const latePaymentPenaltyValue = latePaymentPenaltyPerDay !== undefined && latePaymentPenaltyPerDay !== null && latePaymentPenaltyPerDay !== ""
+        ? Number(latePaymentPenaltyPerDay)
+        : 0
+
+      // Validate optional fields
+      if (Number.isNaN(creditScoreOnCompletionValue) || creditScoreOnCompletionValue < 0 || creditScoreOnCompletionValue > 100) {
+        toast({
+          variant: "destructive",
+          title: "Invalid credit score increase",
+          description: "Credit score increase must be between 0 and 100.",
+        })
+        return
+      }
+
+      if (Number.isNaN(limitIncreaseOnCompletionValue) || limitIncreaseOnCompletionValue < 0) {
+        toast({
+          variant: "destructive",
+          title: "Invalid limit increase",
+          description: "Limit increase must be 0 or greater.",
+        })
+        return
+      }
+
+      if (Number.isNaN(latePaymentPenaltyValue) || latePaymentPenaltyValue < 0) {
+        toast({
+          variant: "destructive",
+          title: "Invalid late payment penalty",
+          description: "Late payment penalty must be 0 or greater.",
+        })
+        return
+      }
+
       const body = {
         name,
         description: description || null,
         minAmount: min,
         maxAmount: max,
         creditScoreRequired: creditScore,
-        creditScoreOnCompletion: Number(creditScoreOnCompletion) || 5,
-        limitIncreaseOnCompletion: Number(limitIncreaseOnCompletion) || 0,
-        latePaymentPenaltyPerDay: Number(latePaymentPenaltyPerDay) || 0,
+        creditScoreOnCompletion: creditScoreOnCompletionValue,
+        limitIncreaseOnCompletion: limitIncreaseOnCompletionValue,
+        latePaymentPenaltyPerDay: latePaymentPenaltyValue,
         allowedMonthsToPay: JSON.stringify(selectedMonths),
         interestRatesByMonth: JSON.stringify(
           Object.fromEntries(

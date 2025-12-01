@@ -63,9 +63,31 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { name, description, minAmount, maxAmount, creditScoreRequired, creditScoreOnCompletion, limitIncreaseOnCompletion, latePaymentPenaltyPerDay, allowedMonthsToPay, interestRatesByMonth } = body
 
-    if (!name || !maxAmount || creditScoreRequired === undefined || creditScoreRequired === null || creditScoreRequired === "") {
+    // Check for required fields, allowing 0 values
+    if (!name || maxAmount === undefined || maxAmount === null || maxAmount === "" || creditScoreRequired === undefined || creditScoreRequired === null || creditScoreRequired === "") {
       return NextResponse.json(
         { error: "Missing required fields: name, maxAmount, and creditScoreRequired are required" },
+        { status: 400 }
+      )
+    }
+
+    // Parse and validate minAmount (allow 0)
+    const minAmountValue = minAmount !== undefined && minAmount !== null && minAmount !== ""
+      ? parseFloat(minAmount)
+      : 0
+    
+    if (isNaN(minAmountValue) || minAmountValue < 0) {
+      return NextResponse.json(
+        { error: "Minimum amount must be 0 or greater" },
+        { status: 400 }
+      )
+    }
+
+    // Parse and validate maxAmount (allow 0)
+    const maxAmountValue = parseFloat(maxAmount)
+    if (isNaN(maxAmountValue) || maxAmountValue < minAmountValue) {
+      return NextResponse.json(
+        { error: "Maximum amount must be greater than or equal to minimum amount" },
         { status: 400 }
       )
     }
@@ -197,8 +219,8 @@ export async function POST(request: Request) {
       data: {
         name,
         description,
-        minAmount: minAmount || 0,
-        maxAmount,
+        minAmount: minAmountValue,
+        maxAmount: maxAmountValue,
         creditScoreRequired: creditScore,
         creditScoreOnCompletion: creditScoreOnCompletionValue,
         limitIncreaseOnCompletion: limitIncreaseOnCompletionValue,

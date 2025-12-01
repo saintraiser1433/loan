@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { validatePhilippinePhone } from "@/lib/phone-validation"
+import { createNotificationForAdmins } from "@/lib/notifications"
 
 export async function POST(request: Request) {
   try {
@@ -118,6 +119,24 @@ export async function POST(request: Request) {
         selfieWithSecondaryIdUrl: selfieWithSecondaryIdUrl || null,
       }
     })
+
+    // Notify admins when a new borrower registers (needs approval)
+    if (role === "BORROWER" && user.status === "PENDING") {
+      try {
+        await createNotificationForAdmins({
+          type: "BORROWER_PENDING",
+          title: "New Borrower Registration",
+          message: `${user.name} (${user.email}) has registered and is waiting for approval`,
+          link: `/dashboard/borrowers`,
+          entityType: "BORROWER",
+          entityId: user.id
+        })
+        console.log(`[Registration] Created notification for admins about new borrower ${user.id}`)
+      } catch (notifError) {
+        console.error(`[Registration] Failed to create notification for borrower ${user.id}:`, notifError)
+        // Don't fail the registration if notification fails
+      }
+    }
 
     return NextResponse.json({
       user: {

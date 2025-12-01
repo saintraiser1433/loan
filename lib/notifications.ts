@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma"
 
 export interface CreateNotificationParams {
   userId: string
-  type: "PAYMENT_PENDING" | "PAYMENT_APPROVED" | "PAYMENT_REJECTED" | "PAYMENT_DUE_SOON" | "PAYMENT_OVERDUE" | "APPLICATION_PENDING" | "LOAN_APPROVED" | "LOAN_REJECTED" | "LOAN_COMPLETED"
+  type: "PAYMENT_PENDING" | "PAYMENT_APPROVED" | "PAYMENT_REJECTED" | "PAYMENT_DUE_SOON" | "PAYMENT_OVERDUE" | "APPLICATION_PENDING" | "BORROWER_PENDING" | "LOAN_APPROVED" | "LOAN_REJECTED" | "LOAN_COMPLETED"
   title: string
   message: string
   link?: string | null
