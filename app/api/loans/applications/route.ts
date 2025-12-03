@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { validatePhilippinePhone } from "@/lib/phone-validation"
 import { createNotificationForAdmins } from "@/lib/notifications"
 import { formatCurrencyPlain } from "@/lib/utils"
 
@@ -22,65 +21,16 @@ export async function POST(request: Request) {
       loanTypeId,
       purposeId,
       paymentDurationId,
-      salary,
-      sourceOfIncome,
-      maritalStatus,
-      primaryIdUrl,
-      secondaryId1Url,
-      secondaryId2Url,
-      selfieWithIdUrl,
-      payslipUrl,
-      billingReceiptUrl,
       requestedAmount,
       purposeDescription,
-      contactPersons
     } = body
 
-    // Validate required fields
-    if (!loanTypeId || !purposeId || !paymentDurationId || !salary || 
-        !sourceOfIncome || !maritalStatus || !requestedAmount) {
+    // Validate required fields (loan details only)
+    if (!loanTypeId || !purposeId || !paymentDurationId || !requestedAmount) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       )
-    }
-
-    // Validate documents (all required)
-    if (!primaryIdUrl || !secondaryId1Url || !secondaryId2Url || !selfieWithIdUrl) {
-      return NextResponse.json(
-        { error: "All required documents must be uploaded (Primary ID, 2 Secondary IDs, and Selfie with ID)" },
-        { status: 400 }
-      )
-    }
-
-    // Validate contact persons (3 required)
-    if (!contactPersons || contactPersons.length !== 3) {
-      return NextResponse.json(
-        { error: "Three contact persons are required" },
-        { status: 400 }
-      )
-    }
-
-    // Validate contact person phone numbers
-    for (let i = 0; i < contactPersons.length; i++) {
-      const person = contactPersons[i]
-      if (!person.name || !person.relationship || !person.phone) {
-        return NextResponse.json(
-          { error: `Contact person ${i + 1} is missing required fields (name, relationship, or phone)` },
-          { status: 400 }
-        )
-      }
-      
-      const phoneValidation = validatePhilippinePhone(person.phone)
-      if (!phoneValidation.isValid) {
-        return NextResponse.json(
-          { error: `Contact person ${i + 1} has invalid phone number: ${phoneValidation.error || "Invalid format"}` },
-          { status: 400 }
-        )
-      }
-      
-      // Update phone to formatted version
-      contactPersons[i].phone = phoneValidation.formatted
     }
 
     // Validate requested amount against loan type limits
@@ -114,6 +64,12 @@ export async function POST(request: Request) {
       where: { id: session.user.id },
       select: {
         loanLimit: true,
+        primaryIdUrl: true,
+        secondaryIdUrl: true,
+        selfieWithPrimaryIdUrl: true,
+        selfieWithSecondaryIdUrl: true,
+        payslipUrl: true,
+        billingReceiptUrl: true,
       }
     })
 
@@ -172,22 +128,56 @@ export async function POST(request: Request) {
       finalPaymentDurationId = paymentDuration.id
     }
 
-    // Create application
+    // Look up most recent application to reuse employment and document info
+    const lastApplication = await prisma.loanApplication.findFirst({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+    })
+
+    // Fallbacks: prefer last application data, then user registration documents
+    const salaryToUse = lastApplication?.salary ?? 0
+    const sourceOfIncomeToUse = lastApplication?.sourceOfIncome ?? "Employment"
+    const maritalStatusToUse = lastApplication?.maritalStatus ?? "SINGLE"
+
+    const primaryIdUrlToUse =
+      lastApplication?.primaryIdUrl ??
+      lastApplication?.secondaryId1Url ??
+      user.primaryIdUrl ??
+      user.secondaryIdUrl
+    const secondaryId1UrlToUse =
+      lastApplication?.secondaryId1Url ?? user.secondaryIdUrl
+    const secondaryId2UrlToUse = lastApplication?.secondaryId2Url ?? null
+    const selfieWithIdUrlToUse =
+      lastApplication?.selfieWithIdUrl ??
+      user.selfieWithPrimaryIdUrl ??
+      user.selfieWithSecondaryIdUrl
+
+    if (!primaryIdUrlToUse || !selfieWithIdUrlToUse) {
+      return NextResponse.json(
+        {
+          error:
+            "Your identity documents are incomplete. Please update your registration/profile details before applying for a loan.",
+        },
+        { status: 400 }
+      )
+    }
+
+    // Create application using stored borrower information
     const application = await prisma.loanApplication.create({
       data: {
         userId: session.user.id,
         loanTypeId,
         purposeId,
         paymentDurationId: finalPaymentDurationId,
-        salary,
-        sourceOfIncome,
-        maritalStatus,
-        primaryIdUrl,
-        secondaryId1Url,
-        secondaryId2Url,
-        selfieWithIdUrl,
-        payslipUrl,
-        billingReceiptUrl,
+        salary: salaryToUse,
+        sourceOfIncome: sourceOfIncomeToUse,
+        maritalStatus: maritalStatusToUse,
+        primaryIdUrl: primaryIdUrlToUse,
+        secondaryId1Url: secondaryId1UrlToUse,
+        secondaryId2Url: secondaryId2UrlToUse,
+        selfieWithIdUrl: selfieWithIdUrlToUse,
+        payslipUrl: lastApplication?.payslipUrl ?? user.payslipUrl ?? null,
+        billingReceiptUrl: lastApplication?.billingReceiptUrl ?? user.billingReceiptUrl ?? null,
         requestedAmount,
         purposeDescription,
         status: "PENDING"
@@ -197,26 +187,6 @@ export async function POST(request: Request) {
         loanType: true
       }
     })
-
-    // Delete existing contact persons and create new ones
-    // This ensures we always have the latest 3 contact persons from the most recent application
-    await prisma.contactPerson.deleteMany({
-      where: { userId: session.user.id }
-    })
-
-    // Create new contact persons
-    await Promise.all(
-      contactPersons.map((cp: { name: string; relationship: string; phone: string }) =>
-        prisma.contactPerson.create({
-          data: {
-            userId: session.user.id,
-            name: cp.name,
-            relationship: cp.relationship,
-            phone: cp.phone
-          }
-        })
-      )
-    )
 
     // Create notification for admins/loan officers
     try {

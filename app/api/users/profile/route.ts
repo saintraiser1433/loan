@@ -14,31 +14,8 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        firstName: true,
-        lastName: true,
-        middleName: true,
-        address: true,
-        block: true,
-        lot: true,
-        barangay: true,
-        city: true,
-        province: true,
-        zipCode: true,
-        dateOfBirth: true,
-        placeOfBirth: true,
-        nationality: true,
-        fathersName: true,
-        mothersName: true,
-        position: true,
-        companyName: true,
-        monthlySalaryMin: true,
-        monthlySalaryMax: true,
-        yearsOfEmployment: true,
+      include: {
+        contactPersons: true,
       },
     })
 
@@ -46,7 +23,41 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ user })
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        middleName: user.middleName,
+        address: user.address,
+        block: user.block,
+        lot: user.lot,
+        barangay: user.barangay,
+        city: user.city,
+        province: user.province,
+        zipCode: user.zipCode,
+        dateOfBirth: user.dateOfBirth,
+        placeOfBirth: user.placeOfBirth,
+        nationality: user.nationality,
+        fathersName: user.fathersName,
+        mothersName: user.mothersName,
+        position: user.position,
+        companyName: user.companyName,
+        monthlySalaryMin: user.monthlySalaryMin,
+        monthlySalaryMax: user.monthlySalaryMax,
+        yearsOfEmployment: user.yearsOfEmployment,
+        primaryIdUrl: user.primaryIdUrl,
+        secondaryIdUrl: user.secondaryIdUrl,
+        selfieWithPrimaryIdUrl: user.selfieWithPrimaryIdUrl,
+        selfieWithSecondaryIdUrl: user.selfieWithSecondaryIdUrl,
+        payslipUrl: user.payslipUrl,
+        billingReceiptUrl: user.billingReceiptUrl,
+        contactPersons: user.contactPersons,
+      },
+    })
   } catch (error) {
     console.error("Error fetching user profile:", error)
     return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 })
@@ -85,6 +96,13 @@ export async function PUT(request: Request) {
       monthlySalaryMin,
       monthlySalaryMax,
       yearsOfEmployment,
+      primaryIdUrl,
+      secondaryIdUrl,
+      selfieWithPrimaryIdUrl,
+      selfieWithSecondaryIdUrl,
+      payslipUrl,
+      billingReceiptUrl,
+      contactPersons,
     } = body
 
     // Validate phone number if provided
@@ -122,40 +140,84 @@ export async function PUT(request: Request) {
     if (companyName !== undefined) updateData.companyName = companyName || null
     if (monthlySalaryMin !== undefined) updateData.monthlySalaryMin = monthlySalaryMin ? parseFloat(monthlySalaryMin) : null
     if (monthlySalaryMax !== undefined) updateData.monthlySalaryMax = monthlySalaryMax ? parseFloat(monthlySalaryMax) : null
-    if (yearsOfEmployment !== undefined) updateData.yearsOfEmployment = yearsOfEmployment ? parseFloat(yearsOfEmployment) : null
+    if (yearsOfEmployment !== undefined)
+      updateData.yearsOfEmployment = yearsOfEmployment ? parseFloat(yearsOfEmployment) : null
+    if (primaryIdUrl !== undefined) updateData.primaryIdUrl = primaryIdUrl || null
+    if (secondaryIdUrl !== undefined) updateData.secondaryIdUrl = secondaryIdUrl || null
+    if (selfieWithPrimaryIdUrl !== undefined)
+      updateData.selfieWithPrimaryIdUrl = selfieWithPrimaryIdUrl || null
+    if (selfieWithSecondaryIdUrl !== undefined)
+      updateData.selfieWithSecondaryIdUrl = selfieWithSecondaryIdUrl || null
+    if (payslipUrl !== undefined) updateData.payslipUrl = payslipUrl || null
+    if (billingReceiptUrl !== undefined) updateData.billingReceiptUrl = billingReceiptUrl || null
 
     const user = await prisma.user.update({
       where: { id: session.user.id },
       data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        firstName: true,
-        lastName: true,
-        middleName: true,
-        address: true,
-        block: true,
-        lot: true,
-        barangay: true,
-        city: true,
-        province: true,
-        zipCode: true,
-        dateOfBirth: true,
-        placeOfBirth: true,
-        nationality: true,
-        fathersName: true,
-        mothersName: true,
-        position: true,
-        companyName: true,
-        monthlySalaryMin: true,
-        monthlySalaryMax: true,
-        yearsOfEmployment: true,
+      include: {
+        contactPersons: true,
       },
     })
 
-    return NextResponse.json({ user })
+    // Update contact persons if provided (replace all for this user)
+    if (Array.isArray(contactPersons)) {
+      try {
+        await prisma.contactPerson.deleteMany({
+          where: { userId: session.user.id },
+        })
+        const filtered = contactPersons.filter(
+          (cp: any) => cp && (cp.name || cp.relationship || cp.phone)
+        )
+        if (filtered.length > 0) {
+          await prisma.contactPerson.createMany({
+            data: filtered.map((cp: any) => ({
+              userId: session.user.id,
+              name: cp.name || "",
+              relationship: cp.relationship || "",
+              phone: cp.phone || "",
+            })),
+          })
+        }
+      } catch (cpError) {
+        console.error("Failed to update contact persons from profile:", cpError)
+      }
+    }
+
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        middleName: user.middleName,
+        address: user.address,
+        block: user.block,
+        lot: user.lot,
+        barangay: user.barangay,
+        city: user.city,
+        province: user.province,
+        zipCode: user.zipCode,
+        dateOfBirth: user.dateOfBirth,
+        placeOfBirth: user.placeOfBirth,
+        nationality: user.nationality,
+        fathersName: user.fathersName,
+        mothersName: user.mothersName,
+        position: user.position,
+        companyName: user.companyName,
+        monthlySalaryMin: user.monthlySalaryMin,
+        monthlySalaryMax: user.monthlySalaryMax,
+        yearsOfEmployment: user.yearsOfEmployment,
+        primaryIdUrl: user.primaryIdUrl,
+        secondaryIdUrl: user.secondaryIdUrl,
+        selfieWithPrimaryIdUrl: user.selfieWithPrimaryIdUrl,
+        selfieWithSecondaryIdUrl: user.selfieWithSecondaryIdUrl,
+        payslipUrl: user.payslipUrl,
+        billingReceiptUrl: user.billingReceiptUrl,
+        contactPersons: user.contactPersons,
+      },
+    })
   } catch (error) {
     console.error("Error updating profile:", error)
     return NextResponse.json({ error: "Failed to update profile" }, { status: 500 })

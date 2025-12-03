@@ -802,10 +802,15 @@ export default function BorrowersPage() {
                   </div>
                 </div>
 
-                {/* ID Documents */}
-                {(borrowerDetails.primaryIdUrl || borrowerDetails.secondaryIdUrl || borrowerDetails.selfieWithPrimaryIdUrl || borrowerDetails.selfieWithSecondaryIdUrl) && (
+                {/* Identity & Income Documents (view-only, mirrors registration) */}
+                {(borrowerDetails.primaryIdUrl ||
+                  borrowerDetails.secondaryIdUrl ||
+                  borrowerDetails.selfieWithPrimaryIdUrl ||
+                  borrowerDetails.selfieWithSecondaryIdUrl ||
+                  borrowerDetails.payslipUrl ||
+                  borrowerDetails.billingReceiptUrl) && (
                   <div className="rounded-lg border bg-card p-4 space-y-3">
-                    <h3 className="text-lg font-semibold">Identity Documents</h3>
+                    <h3 className="text-lg font-semibold">Identity & Income Documents</h3>
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                       {borrowerDetails.primaryIdUrl && (
                         <div className="space-y-2">
@@ -908,6 +913,60 @@ export default function BorrowersPage() {
                                   const parent = target.parentElement
                                   if (parent) {
                                     parent.innerHTML = `<a href="${borrowerDetails.selfieWithSecondaryIdUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">View Document</a>`
+                                  }
+                                }}
+                              />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                      {borrowerDetails.payslipUrl && (
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium text-muted-foreground">Payslip</div>
+                          <div className="relative group">
+                            <a
+                              href={borrowerDetails.payslipUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block"
+                            >
+                              <img
+                                src={borrowerDetails.payslipUrl}
+                                alt="Payslip"
+                                className="w-full h-48 object-cover rounded-md border cursor-pointer hover:opacity-90 transition-opacity"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement
+                                  target.style.display = "none"
+                                  const parent = target.parentElement
+                                  if (parent) {
+                                    parent.innerHTML = `<a href="${borrowerDetails.payslipUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">View Document</a>`
+                                  }
+                                }}
+                              />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                      {borrowerDetails.billingReceiptUrl && (
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium text-muted-foreground">Electric/Water Bill</div>
+                          <div className="relative group">
+                            <a
+                              href={borrowerDetails.billingReceiptUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block"
+                            >
+                              <img
+                                src={borrowerDetails.billingReceiptUrl}
+                                alt="Electric or Water Bill"
+                                className="w-full h-48 object-cover rounded-md border cursor-pointer hover:opacity-90 transition-opacity"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement
+                                  target.style.display = "none"
+                                  const parent = target.parentElement
+                                  if (parent) {
+                                    parent.innerHTML = `<a href="${borrowerDetails.billingReceiptUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">View Document</a>`
                                   }
                                 }}
                               />

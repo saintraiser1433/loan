@@ -35,6 +35,10 @@ export async function POST(request: Request) {
       monthlySalaryMin,
       monthlySalaryMax,
       yearsOfEmployment,
+      // Contacts & documents
+      contactPersons,
+      payslipUrl,
+      billingReceiptUrl,
       primaryIdUrl,
       secondaryIdUrl,
       selfieWithPrimaryIdUrl,
@@ -62,9 +66,19 @@ export async function POST(request: Request) {
       phone = phoneValidation.formatted
     }
 
-    if (role === "BORROWER" && (!primaryIdUrl || !secondaryIdUrl || !selfieWithPrimaryIdUrl || !selfieWithSecondaryIdUrl)) {
+    const hasPrimaryPair = primaryIdUrl && selfieWithPrimaryIdUrl
+    const hasSecondaryPair = secondaryIdUrl && selfieWithSecondaryIdUrl
+
+    if (
+      role === "BORROWER" &&
+      (
+        (!hasPrimaryPair && !hasSecondaryPair) ||
+        !payslipUrl ||
+        !billingReceiptUrl
+      )
+    ) {
       return NextResponse.json(
-        { error: "Primary ID, Secondary ID, and selfies with both IDs are required for borrower registration" },
+        { error: "At least one valid ID with selfie plus payslip and electric/water bill are required for borrower registration" },
         { status: 400 }
       )
     }
@@ -117,8 +131,27 @@ export async function POST(request: Request) {
         secondaryIdUrl: secondaryIdUrl || null,
         selfieWithPrimaryIdUrl: selfieWithPrimaryIdUrl || null,
         selfieWithSecondaryIdUrl: selfieWithSecondaryIdUrl || null,
+        payslipUrl: payslipUrl || null,
+        billingReceiptUrl: billingReceiptUrl || null,
       }
     })
+
+    // Create initial contact persons for borrowers
+    if (role === "BORROWER" && Array.isArray(contactPersons) && contactPersons.length === 3) {
+      try {
+        await prisma.contactPerson.createMany({
+          data: contactPersons.map((cp: { name: string; relationship: string; phone: string }) => ({
+            userId: user.id,
+            name: cp.name,
+            relationship: cp.relationship,
+            phone: cp.phone,
+          })),
+        })
+      } catch (cpError) {
+        console.error("Failed to create contact persons during registration:", cpError)
+        // Do not fail the whole registration if contact person creation fails
+      }
+    }
 
     // Notify admins when a new borrower registers (needs approval)
     if (role === "BORROWER" && user.status === "PENDING") {

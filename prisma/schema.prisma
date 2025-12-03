@@ -50,6 +50,8 @@ model User {
   province          String?
   yearsOfEmployment Float?
   zipCode           String?
+  payslipUrl        String?
+  billingReceiptUrl String?
   contactPersons    ContactPerson[]
   applications      LoanApplication[]
   loans             Loan[]
