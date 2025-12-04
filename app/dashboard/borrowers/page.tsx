@@ -631,7 +631,7 @@ export default function BorrowersPage() {
 
         {/* View Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-full max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Borrower Details</DialogTitle>
               <DialogDescription>
@@ -1000,7 +1000,10 @@ export default function BorrowersPage() {
                     <h3 className="text-lg font-semibold">Recent Applications</h3>
                     <div className="space-y-2">
                       {borrowerDetails.applications.map((app: any) => (
-                        <div key={app.id} className="p-3 rounded border flex justify-between items-center">
+                        <div
+                          key={app.id}
+                          className="p-3 rounded border flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                        >
                           <div>
                             <div className="font-medium">₱{app.requestedAmount.toLocaleString()}</div>
                             <div className="text-sm text-muted-foreground">{app.status}</div>
@@ -1020,7 +1023,10 @@ export default function BorrowersPage() {
                     <h3 className="text-lg font-semibold">Recent Loans</h3>
                     <div className="space-y-2">
                       {borrowerDetails.loans.map((loan: any) => (
-                        <div key={loan.id} className="p-3 rounded border flex justify-between items-center">
+                        <div
+                          key={loan.id}
+                          className="p-3 rounded border flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                        >
                           <div>
                             <div className="font-medium">₱{loan.principalAmount.toLocaleString()}</div>
                             <div className="text-sm text-muted-foreground">{loan.status}</div>

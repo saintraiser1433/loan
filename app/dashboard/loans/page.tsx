@@ -406,13 +406,15 @@ export default function LoansPage() {
           </button>
         </div>
 
-        <DataTable
-          data={filteredLoans}
-          columns={columns}
-          searchable={true}
-          searchPlaceholder="Search loans..."
-          pageSize={10}
-        />
+        <div className="w-full overflow-x-auto">
+          <DataTable
+            data={filteredLoans}
+            columns={columns}
+            searchable={true}
+            searchPlaceholder="Search loans..."
+            pageSize={10}
+          />
+        </div>
       </div>
     </DashboardLayout>
   )

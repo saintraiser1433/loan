@@ -406,13 +406,13 @@ export function LoanDetailsView({ loan }: LoanDetailsViewProps) {
                             const remainingAfterPayment = amountDue - payment.amount
                             const willCompleteTerm = remainingAfterPayment <= 0.01
                             
-                            return (
-                              <div
-                                key={payment.id}
-                                className="flex items-center justify-between rounded-lg border bg-yellow-50 p-3 dark:bg-yellow-900/20"
-                              >
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
+                          return (
+                            <div
+                              key={payment.id}
+                              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border bg-yellow-50 p-3 dark:bg-yellow-900/20"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-medium">
                                       ₱{payment.amount.toLocaleString()}
                                     </span>
@@ -452,7 +452,7 @@ export function LoanDetailsView({ loan }: LoanDetailsViewProps) {
                                   )}
                                 </div>
                                 {isAdminOrOfficer && (
-                                  <div className="flex gap-2">
+                                  <div className="flex gap-2 flex-shrink-0">
                                     <Button
                                       size="sm"
                                       onClick={() => {
@@ -492,7 +492,7 @@ export function LoanDetailsView({ loan }: LoanDetailsViewProps) {
                             return (
                               <div
                                 key={payment.id}
-                                className="flex items-center justify-between rounded-lg border bg-green-50 p-3 dark:bg-green-900/20"
+                                className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border bg-green-50 p-3 dark:bg-green-900/20"
                               >
                                 <div>
                                   <div className="flex items-center gap-2 flex-wrap">
