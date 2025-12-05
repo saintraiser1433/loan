@@ -217,7 +217,7 @@ export default function LoansPage() {
         const isOverdue = displayStatus === "OVERDUE"
         
         return (
-          <span className={`px-2 py-1 rounded text-xs font-medium ${
+          <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
             displayStatus === "PAID" ? "bg-gradient-to-r from-green-400 to-green-600 text-white" :
             isOverdue ? "bg-gradient-to-r from-red-400 to-red-600 text-white" :
             displayStatus === "OVERDUE" ? "bg-gradient-to-r from-red-400 to-red-600 text-white" :

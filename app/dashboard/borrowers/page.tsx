@@ -315,7 +315,7 @@ export default function BorrowersPage() {
         const isBlocked = !row.isActive
         return (
           <div className="flex flex-col gap-1">
-            <span className={`px-2 py-1 rounded text-xs font-medium ${
+            <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
               status === "APPROVED" ? "bg-gradient-to-r from-green-400 to-green-600 text-white dark:from-green-500 dark:to-green-700" :
               status === "REJECTED" ? "bg-gradient-to-r from-red-400 to-red-600 text-white dark:from-red-500 dark:to-red-700" :
               "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white dark:from-yellow-500 dark:to-yellow-700"
@@ -324,7 +324,7 @@ export default function BorrowersPage() {
             </span>
             {isBlocked && (
               <div className="flex flex-col gap-1">
-                <span className="px-2 py-1 rounded text-xs font-medium bg-gradient-to-r from-gray-500 to-gray-700 text-white dark:from-gray-600 dark:to-gray-800">
+                <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-gradient-to-r from-gray-500 to-gray-700 text-white dark:from-gray-600 dark:to-gray-800">
                   BLOCKED
                 </span>
                 {row.blockReason && (
@@ -631,7 +631,7 @@ export default function BorrowersPage() {
 
         {/* View Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-          <DialogContent className="w-full max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100%-2rem)] max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Borrower Details</DialogTitle>
               <DialogDescription>
@@ -756,7 +756,7 @@ export default function BorrowersPage() {
                     <div>
                       <div className="text-sm text-muted-foreground">Status</div>
                       <div>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                           borrowerDetails.status === "APPROVED" ? "bg-gradient-to-r from-green-400 to-green-600 text-white dark:from-green-500 dark:to-green-700" :
                           borrowerDetails.status === "REJECTED" ? "bg-gradient-to-r from-red-400 to-red-600 text-white dark:from-red-500 dark:to-red-700" :
                           "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white dark:from-yellow-500 dark:to-yellow-700"
