@@ -3,7 +3,6 @@
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 
 interface ApproveBorrowerFormProps {
@@ -19,44 +18,15 @@ export function ApproveBorrowerForm({
 }: ApproveBorrowerFormProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [creditScore, setCreditScore] = useState("")
-  const [loanLimit, setLoanLimit] = useState("")
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
+  const handleApprove = async () => {
     setLoading(true)
-
-    const score = Number(creditScore)
-    const limit = Number(loanLimit)
-
-    if (Number.isNaN(score) || score < 0 || score > 100) {
-      toast({
-        title: "Invalid Credit Score",
-        description: "Credit score must be between 0 and 100.",
-        variant: "destructive",
-      })
-      setLoading(false)
-      return
-    }
-
-    if (Number.isNaN(limit) || limit <= 0) {
-      toast({
-        title: "Invalid Loan Limit",
-        description: "Loan limit must be greater than zero.",
-        variant: "destructive",
-      })
-      setLoading(false)
-      return
-    }
 
     try {
       const response = await fetch(`/api/borrowers/${borrowerId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          creditScore: score,
-          loanLimit: limit,
-        }),
+        body: JSON.stringify({}),
       })
 
       if (!response.ok) {
@@ -66,7 +36,7 @@ export function ApproveBorrowerForm({
 
       toast({
         title: "Borrower Approved",
-        description: `${borrowerName} has been approved successfully.`,
+        description: `${borrowerName} has been approved successfully with default credit score (0) and loan limit (₱5,000).`,
       })
       onSuccess?.()
     } catch (error: any) {
@@ -82,42 +52,33 @@ export function ApproveBorrowerForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium">Credit Score *</label>
-        <Input
-          type="number"
-          min={0}
-          max={100}
-          step={1}
-          value={creditScore}
-          onChange={(event) => setCreditScore(event.target.value)}
-          required
-        />
-        <p className="text-xs text-muted-foreground">Enter a value between 0 and 100.</p>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium">Initial Loan Limit (₱) *</label>
-        <Input
-          type="number"
-          min={0}
-          step={500}
-          value={loanLimit}
-          onChange={(event) => setLoanLimit(event.target.value)}
-          required
-        />
-        <p className="text-xs text-muted-foreground">
-          Set the borrower's starting loan limit.
+    <div className="space-y-4">
+      <div className="rounded-lg border bg-muted/50 p-4">
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to approve <strong>{borrowerName}</strong>?
         </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The borrower will be approved with default values:
+        </p>
+        <ul className="mt-2 list-disc list-inside text-sm text-muted-foreground space-y-1">
+          <li>Credit Score: <strong>0</strong></li>
+          <li>Loan Limit: <strong>₱5,000</strong></li>
+        </ul>
       </div>
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={loading}>
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={onSuccess}
+          disabled={loading}
+        >
+          Cancel
+        </Button>
+        <Button onClick={handleApprove} disabled={loading}>
           {loading ? "Approving..." : "Approve Borrower"}
         </Button>
       </div>
-    </form>
+    </div>
   )
 }
 

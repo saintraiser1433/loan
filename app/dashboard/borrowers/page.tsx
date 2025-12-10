@@ -484,7 +484,7 @@ export default function BorrowersPage() {
             <DialogHeader>
               <DialogTitle>Approve Borrower</DialogTitle>
               <DialogDescription>
-                Set the initial credit score and loan limit for {selectedBorrower?.name}
+                Confirm approval for {selectedBorrower?.name}. The borrower will be approved with default credit score (0) and loan limit (₱5,000).
               </DialogDescription>
             </DialogHeader>
             {selectedBorrower && (
