@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useSession } from "next-auth/react"
-import { Landmark, LayoutDashboard, FileText, CreditCard, Settings, BarChart3, Users, History, Wallet, UserCog, MessageSquare } from "lucide-react"
+import { Landmark, LayoutDashboard, FileText, CreditCard, Settings, BarChart3, Users, History, Wallet, UserCog, MessageSquare, ClipboardList } from "lucide-react"
 import Link from "next/link"
 
 import { NavUser } from "@/components/nav-user"
@@ -34,6 +34,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     { title: "Applications", url: "/dashboard/applications", icon: FileText },
     { title: "Loans", url: "/dashboard/loans", icon: CreditCard },
     { title: "Loan Types", url: "/dashboard/loan-types", icon: Settings },
+    { title: "Requirements", url: "/dashboard/requirements", icon: ClipboardList },
     { title: "Payment Methods", url: "/dashboard/payment-methods", icon: Wallet },
     { title: "Reports", url: "/dashboard/reports", icon: BarChart3 },
     { title: "Activity Logs", url: "/dashboard/activity-logs", icon: History },
