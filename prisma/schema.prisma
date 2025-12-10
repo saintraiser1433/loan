@@ -273,6 +273,9 @@ model Requirement {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  parentId    String?
+  parent      Requirement? @relation("RequirementChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Requirement[] @relation("RequirementChildren")
 
   @@map("requirements")
 }

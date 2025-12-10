@@ -26,6 +26,8 @@ interface Requirement {
   isActive: boolean
   createdAt: string
   updatedAt: string
+  parentId?: string | null
+  children?: Requirement[]
 }
 
 export default function RequirementsPage() {
@@ -39,6 +41,7 @@ export default function RequirementsPage() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [isActive, setIsActive] = useState(true)
+  const [parentId, setParentId] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -78,6 +81,7 @@ export default function RequirementsPage() {
     setName("")
     setDescription("")
     setIsActive(true)
+    setParentId(null)
   }
 
   const openCreate = () => {
@@ -90,6 +94,7 @@ export default function RequirementsPage() {
     setName(req.name)
     setDescription(req.description || "")
     setIsActive(req.isActive)
+    setParentId(req.parentId || null)
     setDialogOpen(true)
   }
 
@@ -104,6 +109,7 @@ export default function RequirementsPage() {
         name: name.trim(),
         description: description.trim() || null,
         isActive,
+        parentId: parentId || null,
       }
       const url = editing ? `/api/requirements/${editing.id}` : "/api/requirements"
       const method = editing ? "PUT" : "POST"
@@ -159,6 +165,66 @@ export default function RequirementsPage() {
     )
   }
 
+  const topLevel = requirements.filter((r) => !r.parentId)
+
+  const renderRows = (items: Requirement[], depth = 0) =>
+    items.map((req) => (
+      <tr key={req.id} className="border-b last:border-b-0">
+        <td className="px-4 py-3 font-medium">
+          <span className={depth > 0 ? "pl-4 text-sm" : ""}>
+            {depth > 0 ? "— " : ""}
+            {req.name}
+          </span>
+        </td>
+        <td className="px-4 py-3 text-muted-foreground">
+          {req.description || "-"}
+        </td>
+        <td className="px-4 py-3">
+          <Badge variant={req.isActive ? "default" : "secondary"}>
+            {req.isActive ? "Active" : "Inactive"}
+          </Badge>
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex justify-end gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openEdit(req)}
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setParentId(req.id)
+                setEditing(null)
+                setName("")
+                setDescription("")
+                setIsActive(true)
+                setDialogOpen(true)
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Child
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleDelete(req.id)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+          </div>
+        </td>
+      </tr>
+    )).flatMap((row, idx, arr) => {
+      const children = (items[idx].children || []).map((c) => ({ ...c, children: c.children || [] }))
+      return [row, ...(children.length ? renderRows(children, depth + 1) : [])]
+    })
+
   return (
     <DashboardLayout>
       <div className="space-y-4 sm:space-y-6">
@@ -194,39 +260,7 @@ export default function RequirementsPage() {
                     </td>
                   </tr>
                 ) : (
-                  requirements.map((req) => (
-                    <tr key={req.id} className="border-b last:border-b-0">
-                      <td className="px-4 py-3 font-medium">{req.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {req.description || "-"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={req.isActive ? "default" : "secondary"}>
-                          {req.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEdit(req)}
-                          >
-                            <Pencil className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDelete(req.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  renderRows(topLevel)
                 )}
               </tbody>
             </table>
@@ -260,6 +294,23 @@ export default function RequirementsPage() {
                   placeholder="Optional details or instructions"
                   rows={3}
                 />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Parent (optional)</label>
+                <select
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                  value={parentId || ""}
+                  onChange={(e) => setParentId(e.target.value || null)}
+                >
+                  <option value="">No parent (top-level)</option>
+                  {requirements
+                    .filter((r) => !r.parentId)
+                    .map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                </select>
               </div>
               <div className="flex items-center gap-2">
                 <input

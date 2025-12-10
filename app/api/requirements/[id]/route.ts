@@ -18,10 +18,21 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json().catch(() => ({}))
-    const { name, description, isActive } = body
+    const { name, description, isActive, parentId } = body
 
     if (name !== undefined && (!name || typeof name !== "string" || !name.trim())) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 })
+    }
+
+    // Validate parent if provided
+    if (parentId) {
+      if (parentId === id) {
+        return NextResponse.json({ error: "A requirement cannot be its own parent" }, { status: 400 })
+      }
+      const parent = await prisma.requirement.findUnique({ where: { id: parentId } })
+      if (!parent) {
+        return NextResponse.json({ error: "Parent requirement not found" }, { status: 404 })
+      }
     }
 
     const requirement = await prisma.requirement.update({
@@ -30,6 +41,7 @@ export async function PUT(
         ...(name !== undefined ? { name: name.trim() } : {}),
         ...(description !== undefined ? { description: description?.trim() || null } : {}),
         ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
+        ...(parentId !== undefined ? { parentId: parentId || null } : {}),
       },
     })
 

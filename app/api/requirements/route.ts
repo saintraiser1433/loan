@@ -11,7 +11,12 @@ export async function GET() {
     }
 
     const requirements = await prisma.requirement.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: "asc" },
+      include: {
+        children: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
     })
 
     return NextResponse.json(requirements)
@@ -32,10 +37,18 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}))
-    const { name, description, isActive = true } = body
+    const { name, description, isActive = true, parentId } = body
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 })
+    }
+
+    // If parentId provided, ensure it exists
+    if (parentId) {
+      const parent = await prisma.requirement.findUnique({ where: { id: parentId } })
+      if (!parent) {
+        return NextResponse.json({ error: "Parent requirement not found" }, { status: 404 })
+      }
     }
 
     const requirement = await prisma.requirement.create({
@@ -43,6 +56,7 @@ export async function POST(request: Request) {
         name: name.trim(),
         description: description?.trim() || null,
         isActive: Boolean(isActive),
+        parentId: parentId || null,
       },
     })
 
