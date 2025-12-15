@@ -3,13 +3,20 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { redirect } from "next/navigation"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Plus, Pencil, Trash2, ChevronRight, ChevronDown } from "lucide-react"
 
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -24,10 +31,11 @@ interface Requirement {
   name: string
   description?: string | null
   isActive: boolean
+  parentId?: string | null
+  parent?: Requirement | null
+  children?: Requirement[]
   createdAt: string
   updatedAt: string
-  parentId?: string | null
-  children?: Requirement[]
 }
 
 export default function RequirementsPage() {
@@ -41,7 +49,8 @@ export default function RequirementsPage() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [isActive, setIsActive] = useState(true)
-  const [parentId, setParentId] = useState<string | null>(null)
+  const [parentId, setParentId] = useState<string>("")
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -63,6 +72,9 @@ export default function RequirementsPage() {
       if (res.ok) {
         const data = await res.json()
         setRequirements(data)
+        // Auto-expand all parents
+        const parentIds = data.filter((r: Requirement) => r.children && r.children.length > 0).map((r: Requirement) => r.id)
+        setExpandedParents(new Set(parentIds))
       }
     } catch (error) {
       console.error("Failed to load requirements", error)
@@ -81,7 +93,7 @@ export default function RequirementsPage() {
     setName("")
     setDescription("")
     setIsActive(true)
-    setParentId(null)
+    setParentId("")
   }
 
   const openCreate = () => {
@@ -94,7 +106,7 @@ export default function RequirementsPage() {
     setName(req.name)
     setDescription(req.description || "")
     setIsActive(req.isActive)
-    setParentId(req.parentId || null)
+    setParentId(req.parentId || "")
     setDialogOpen(true)
   }
 
@@ -147,7 +159,7 @@ export default function RequirementsPage() {
         throw new Error(data.error || "Failed to delete requirement")
       }
       toast({ title: "Requirement deleted" })
-      setRequirements((prev) => prev.filter((r) => r.id !== id))
+      fetchRequirements()
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -155,6 +167,103 @@ export default function RequirementsPage() {
         description: error?.message || "Failed to delete requirement",
       })
     }
+  }
+
+  const toggleExpand = (id: string) => {
+    setExpandedParents((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  // Get parent requirements (requirements without a parent)
+  const parentRequirements = requirements.filter((r) => !r.parentId)
+  // Get all requirements that can be parents (exclude the one being edited and its children)
+  const getAvailableParents = () => {
+    if (!editing) return parentRequirements
+    // Exclude the requirement being edited and all its descendants
+    const excludeIds = new Set([editing.id])
+    const collectDescendants = (reqId: string) => {
+      requirements.forEach((r) => {
+        if (r.parentId === reqId) {
+          excludeIds.add(r.id)
+          collectDescendants(r.id)
+        }
+      })
+    }
+    collectDescendants(editing.id)
+    return parentRequirements.filter((r) => !excludeIds.has(r.id))
+  }
+
+  const renderRequirementRow = (req: Requirement, level: number = 0) => {
+    const hasChildren = req.children && req.children.length > 0
+    const isExpanded = expandedParents.has(req.id)
+    const indent = level * 24
+
+    return (
+      <>
+        <tr key={req.id} className="border-b last:border-b-0">
+          <td className="px-4 py-3">
+            <div className="flex items-center gap-2" style={{ paddingLeft: `${indent}px` }}>
+              {hasChildren ? (
+                <button
+                  onClick={() => toggleExpand(req.id)}
+                  className="p-0.5 hover:bg-muted rounded"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </button>
+              ) : (
+                <span className="w-5" />
+              )}
+              <span className="font-medium">{req.name}</span>
+              {hasChildren && (
+                <Badge variant="outline" className="ml-2 text-xs">
+                  {req.children.length} {req.children.length === 1 ? "child" : "children"}
+                </Badge>
+              )}
+            </div>
+          </td>
+          <td className="px-4 py-3 text-muted-foreground">
+            {req.description || "-"}
+          </td>
+          <td className="px-4 py-3">
+            <Badge variant={req.isActive ? "default" : "secondary"}>
+              {req.isActive ? "Active" : "Inactive"}
+            </Badge>
+          </td>
+          <td className="px-4 py-3">
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openEdit(req)}
+              >
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDelete(req.id)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </div>
+          </td>
+        </tr>
+        {hasChildren && isExpanded && req.children?.map((child) => renderRequirementRow(child, level + 1))}
+      </>
+    )
   }
 
   if (status === "loading" || loading) {
@@ -165,66 +274,6 @@ export default function RequirementsPage() {
     )
   }
 
-  const topLevel = requirements.filter((r) => !r.parentId)
-
-  const renderRows = (items: Requirement[], depth = 0) =>
-    items.map((req) => (
-      <tr key={req.id} className="border-b last:border-b-0">
-        <td className="px-4 py-3 font-medium">
-          <span className={depth > 0 ? "pl-4 text-sm" : ""}>
-            {depth > 0 ? "— " : ""}
-            {req.name}
-          </span>
-        </td>
-        <td className="px-4 py-3 text-muted-foreground">
-          {req.description || "-"}
-        </td>
-        <td className="px-4 py-3">
-          <Badge variant={req.isActive ? "default" : "secondary"}>
-            {req.isActive ? "Active" : "Inactive"}
-          </Badge>
-        </td>
-        <td className="px-4 py-3">
-          <div className="flex justify-end gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => openEdit(req)}
-            >
-              <Pencil className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setParentId(req.id)
-                setEditing(null)
-                setName("")
-                setDescription("")
-                setIsActive(true)
-                setDialogOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add Child
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => handleDelete(req.id)}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
-            </Button>
-          </div>
-        </td>
-      </tr>
-    )).flatMap((row, idx, arr) => {
-      const children = (items[idx].children || []).map((c) => ({ ...c, children: c.children || [] }))
-      return [row, ...(children.length ? renderRows(children, depth + 1) : [])]
-    })
-
   return (
     <DashboardLayout>
       <div className="space-y-4 sm:space-y-6">
@@ -232,7 +281,7 @@ export default function RequirementsPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Requirements</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Manage the list of required documents/information.
+              Manage the list of required documents/information. Create parent requirements with child requirements.
             </p>
           </div>
           <Button onClick={openCreate} className="w-full sm:w-auto">
@@ -260,7 +309,7 @@ export default function RequirementsPage() {
                     </td>
                   </tr>
                 ) : (
-                  renderRows(topLevel)
+                  parentRequirements.map((req) => renderRequirementRow(req, 0))
                 )}
               </tbody>
             </table>
@@ -274,7 +323,7 @@ export default function RequirementsPage() {
               <DialogDescription>
                 {editing
                   ? "Update the requirement details."
-                  : "Create a requirement that will be shown as part of the required documents/information list."}
+                  : "Create a requirement. Leave 'Parent' empty to create a parent requirement, or select a parent to create a child requirement."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -283,8 +332,29 @@ export default function RequirementsPage() {
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Primary ID, Proof of Billing"
+                  placeholder="e.g., Primary Valid ID, SSS ID Card, Payslip"
                 />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Parent (Optional)</label>
+                <Select value={parentId} onValueChange={setParentId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="None (Create as parent requirement)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None (Create as parent requirement)</SelectItem>
+                    {getAvailableParents().map((req) => (
+                      <SelectItem key={req.id} value={req.id}>
+                        {req.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {parentId
+                    ? "This will be created as a child requirement."
+                    : "This will be created as a parent requirement (can have children)."}
+                </p>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Description</label>
@@ -294,23 +364,6 @@ export default function RequirementsPage() {
                   placeholder="Optional details or instructions"
                   rows={3}
                 />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Parent (optional)</label>
-                <select
-                  className="w-full rounded-md border px-3 py-2 text-sm"
-                  value={parentId || ""}
-                  onChange={(e) => setParentId(e.target.value || null)}
-                >
-                  <option value="">No parent (top-level)</option>
-                  {requirements
-                    .filter((r) => !r.parentId)
-                    .map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                </select>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -346,4 +399,3 @@ export default function RequirementsPage() {
     </DashboardLayout>
   )
 }
-

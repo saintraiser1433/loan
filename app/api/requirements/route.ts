@@ -11,12 +11,13 @@ export async function GET() {
     }
 
     const requirements = await prisma.requirement.findMany({
-      orderBy: { createdAt: "asc" },
       include: {
+        parent: true,
         children: {
-          orderBy: { createdAt: "asc" },
+          orderBy: { name: "asc" },
         },
       },
+      orderBy: { createdAt: "desc" },
     })
 
     return NextResponse.json(requirements)
@@ -43,11 +44,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 })
     }
 
-    // If parentId provided, ensure it exists
+    // Validate parentId if provided
     if (parentId) {
-      const parent = await prisma.requirement.findUnique({ where: { id: parentId } })
+      const parent = await prisma.requirement.findUnique({
+        where: { id: parentId },
+      })
       if (!parent) {
-        return NextResponse.json({ error: "Parent requirement not found" }, { status: 404 })
+        return NextResponse.json({ error: "Parent requirement not found" }, { status: 400 })
       }
     }
 
@@ -58,6 +61,10 @@ export async function POST(request: Request) {
         isActive: Boolean(isActive),
         parentId: parentId || null,
       },
+      include: {
+        parent: true,
+        children: true,
+      },
     })
 
     return NextResponse.json(requirement, { status: 201 })
@@ -65,7 +72,7 @@ export async function POST(request: Request) {
     console.error("Error creating requirement:", error)
     const message =
       error?.code === "P2002"
-        ? "A requirement with this name already exists"
+        ? "A requirement with this name already exists under the same parent"
         : "Failed to create requirement"
     return NextResponse.json({ error: message }, { status: 500 })
   }

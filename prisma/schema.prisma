@@ -267,16 +267,17 @@ model SMSSettings {
 }
 
 model Requirement {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String        @id @default(cuid())
+  name        String
   description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive    Boolean       @default(true)
   parentId    String?
-  parent      Requirement? @relation("RequirementChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  parent      Requirement?  @relation("RequirementChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children    Requirement[] @relation("RequirementChildren")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
+  @@unique([name, parentId])
   @@map("requirements")
 }
 
