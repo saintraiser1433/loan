@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { redirect } from "next/navigation"
-import { Plus, Pencil, Trash2, ChevronRight, ChevronDown } from "lucide-react"
+import { Plus, Pencil, Trash2 } from "lucide-react"
 
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
@@ -11,19 +11,13 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
+import { DataTable } from "@/components/data-table"
 import { useToast } from "@/hooks/use-toast"
 
 interface Requirement {
@@ -31,9 +25,6 @@ interface Requirement {
   name: string
   description?: string | null
   isActive: boolean
-  parentId?: string | null
-  parent?: Requirement | null
-  children?: Requirement[]
   createdAt: string
   updatedAt: string
 }
@@ -49,8 +40,6 @@ export default function RequirementsPage() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [isActive, setIsActive] = useState(true)
-  const [parentId, setParentId] = useState<string>("")
-  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -71,10 +60,25 @@ export default function RequirementsPage() {
       const res = await fetch("/api/requirements")
       if (res.ok) {
         const data = await res.json()
-        setRequirements(data)
-        // Auto-expand all parents
-        const parentIds = data.filter((r: Requirement) => r.children && r.children.length > 0).map((r: Requirement) => r.id)
-        setExpandedParents(new Set(parentIds))
+        // Flatten the requirements list (remove hierarchical structure)
+        const flattenedRequirements: Requirement[] = []
+        const flatten = (reqs: any[]) => {
+          reqs.forEach((req: any) => {
+            flattenedRequirements.push({
+              id: req.id,
+              name: req.name,
+              description: req.description,
+              isActive: req.isActive,
+              createdAt: req.createdAt,
+              updatedAt: req.updatedAt,
+            })
+            if (req.children && req.children.length > 0) {
+              flatten(req.children)
+            }
+          })
+        }
+        flatten(data)
+        setRequirements(flattenedRequirements)
       }
     } catch (error) {
       console.error("Failed to load requirements", error)
@@ -93,7 +97,6 @@ export default function RequirementsPage() {
     setName("")
     setDescription("")
     setIsActive(true)
-    setParentId("")
   }
 
   const openCreate = () => {
@@ -106,7 +109,6 @@ export default function RequirementsPage() {
     setName(req.name)
     setDescription(req.description || "")
     setIsActive(req.isActive)
-    setParentId(req.parentId || "")
     setDialogOpen(true)
   }
 
@@ -117,19 +119,11 @@ export default function RequirementsPage() {
     }
     setSaving(true)
     try {
-      // Normalize parentId: empty string, "__none__", or falsy should be null
-      const normalizedParentId = parentId && parentId !== "__none__" && parentId.trim() !== "" 
-        ? parentId.trim() 
-        : null
-
       const payload = {
         name: name.trim(),
         description: description.trim() || null,
         isActive,
-        parentId: normalizedParentId,
       }
-      
-      console.log("Sending payload:", payload) // Debug log
       
       const url = editing ? `/api/requirements/${editing.id}` : "/api/requirements"
       const method = editing ? "PUT" : "POST"
@@ -149,7 +143,6 @@ export default function RequirementsPage() {
       }
       
       if (!res.ok) {
-        console.error("API Error:", data) // Debug log
         const errorMessage = data?.error || data?.details || data?.message || `Failed to save requirement (${res.status})`
         throw new Error(errorMessage)
       }
@@ -158,7 +151,6 @@ export default function RequirementsPage() {
       resetForm()
       fetchRequirements()
     } catch (error: any) {
-      console.error("Save error:", error) // Debug log
       toast({
         variant: "destructive",
         title: "Error",
@@ -189,108 +181,52 @@ export default function RequirementsPage() {
     }
   }
 
-  const toggleExpand = (id: string) => {
-    setExpandedParents((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
-
-  // Get parent requirements (requirements without a parent)
-  const parentRequirements = requirements.filter((r) => !r.parentId)
-  // Get all requirements that can be parents (exclude the one being edited and its children)
-  const getAvailableParents = () => {
-    if (!editing) return parentRequirements
-    // Exclude the requirement being edited and all its descendants
-    const excludeIds = new Set([editing.id])
-    const collectDescendants = (reqId: string) => {
-      requirements.forEach((r) => {
-        if (r.parentId === reqId) {
-          excludeIds.add(r.id)
-          collectDescendants(r.id)
-        }
-      })
-    }
-    collectDescendants(editing.id)
-    return parentRequirements.filter((r) => !excludeIds.has(r.id))
-  }
-
-  const renderRequirementRow = (req: Requirement, level: number = 0): React.ReactNode[] => {
-    const hasChildren = req.children && req.children.length > 0
-    const isExpanded = expandedParents.has(req.id)
-    const indent = level * 24
-
-    const rows: React.ReactNode[] = [
-      <tr key={req.id} className="border-b last:border-b-0">
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2" style={{ paddingLeft: `${indent}px` }}>
-            {hasChildren ? (
-              <button
-                onClick={() => toggleExpand(req.id)}
-                className="p-0.5 hover:bg-muted rounded"
-              >
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </button>
-            ) : (
-              <span className="w-5" />
-            )}
-            <span className="font-medium">{req.name}</span>
-            {hasChildren && (
-              <Badge variant="outline" className="ml-2 text-xs">
-                {req.children.length} {req.children.length === 1 ? "child" : "children"}
-              </Badge>
-            )}
-          </div>
-        </td>
-        <td className="px-4 py-3 text-muted-foreground">
-          {req.description || "-"}
-        </td>
-        <td className="px-4 py-3">
-          <Badge variant={req.isActive ? "default" : "secondary"}>
-            {req.isActive ? "Active" : "Inactive"}
-          </Badge>
-        </td>
-        <td className="px-4 py-3">
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => openEdit(req)}
-            >
-              <Pencil className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => handleDelete(req.id)}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
-            </Button>
-          </div>
-        </td>
-      </tr>
-    ]
-
-    // Add children rows if expanded
-    if (hasChildren && isExpanded && req.children) {
-      req.children.forEach((child) => {
-        rows.push(...renderRequirementRow(child, level + 1))
-      })
-    }
-
-    return rows
-  }
+  const columns = [
+    {
+      header: "Name",
+      accessor: (row: Requirement) => (
+        <span className="font-medium">{row.name}</span>
+      ),
+    },
+    {
+      header: "Description",
+      accessor: (row: Requirement) => (
+        <span className="text-muted-foreground">{row.description || "-"}</span>
+      ),
+    },
+    {
+      header: "Status",
+      accessor: (row: Requirement) => (
+        <Badge variant={row.isActive ? "default" : "secondary"}>
+          {row.isActive ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      header: "Actions",
+      accessor: (row: Requirement) => (
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => openEdit(row)}
+          >
+            <Pencil className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => handleDelete(row.id)}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
+          </Button>
+        </div>
+      ),
+      className: "text-right",
+    },
+  ]
 
   if (status === "loading" || loading) {
     return (
@@ -307,7 +243,7 @@ export default function RequirementsPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Requirements</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Manage the list of required documents/information. Create parent requirements with child requirements.
+              Manage the list of required documents/information.
             </p>
           </div>
           <Button onClick={openCreate} className="w-full sm:w-auto">
@@ -316,31 +252,13 @@ export default function RequirementsPage() {
           </Button>
         </div>
 
-        <div className="rounded-lg border bg-card">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="border-b bg-muted/50">
-                <tr className="text-left">
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Description</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requirements.length === 0 ? (
-                  <tr>
-                    <td className="px-4 py-6 text-center text-muted-foreground" colSpan={4}>
-                      No requirements yet.
-                    </td>
-                  </tr>
-                ) : (
-                  parentRequirements.flatMap((req) => renderRequirementRow(req, 0))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataTable
+          data={requirements}
+          columns={columns}
+          searchable={true}
+          searchPlaceholder="Search requirements..."
+          pageSize={10}
+        />
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-lg">
@@ -349,7 +267,7 @@ export default function RequirementsPage() {
               <DialogDescription>
                 {editing
                   ? "Update the requirement details."
-                  : "Create a requirement. Leave 'Parent' empty to create a parent requirement, or select a parent to create a child requirement."}
+                  : "Create a new requirement for loan applications."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -360,30 +278,6 @@ export default function RequirementsPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Primary Valid ID, SSS ID Card, Payslip"
                 />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Parent (Optional)</label>
-                <Select 
-                  value={parentId || "__none__"} 
-                  onValueChange={(value) => setParentId(value === "__none__" ? "" : value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="None (Create as parent requirement)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">None (Create as parent requirement)</SelectItem>
-                    {getAvailableParents().map((req) => (
-                      <SelectItem key={req.id} value={req.id}>
-                        {req.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {parentId
-                    ? "This will be created as a child requirement."
-                    : "This will be created as a parent requirement (can have children)."}
-                </p>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Description</label>
