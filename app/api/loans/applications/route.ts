@@ -23,6 +23,7 @@ export async function POST(request: Request) {
       paymentDurationId,
       requestedAmount,
       purposeDescription,
+      requirementUploads,
     } = body
 
     // Validate required fields (loan details only)
@@ -35,7 +36,14 @@ export async function POST(request: Request) {
 
     // Validate requested amount against loan type limits
     const loanType = await prisma.loanType.findUnique({
-      where: { id: loanTypeId }
+      where: { id: loanTypeId },
+      include: {
+        requirements: {
+          include: {
+            requirement: true,
+          },
+        },
+      },
     })
 
     if (!loanType) {
@@ -43,6 +51,29 @@ export async function POST(request: Request) {
         { error: "Loan type not found" },
         { status: 400 }
       )
+    }
+
+    // Validate requirement uploads
+    if (loanType.requirements && loanType.requirements.length > 0) {
+      if (!requirementUploads || !Array.isArray(requirementUploads)) {
+        return NextResponse.json(
+          { error: "Required documents must be uploaded for this loan type" },
+          { status: 400 }
+        )
+      }
+
+      // Check that all required requirements have uploads
+      for (const req of loanType.requirements) {
+        const upload = requirementUploads.find(
+          (u: any) => u.requirementId === req.requirementId
+        )
+        if (!upload || !upload.documentUrl || !upload.selfieUrl) {
+          return NextResponse.json(
+            { error: `Please upload ${req.requirement.name} document and selfie` },
+            { status: 400 }
+          )
+        }
+      }
     }
 
     if (requestedAmount < loanType.minAmount) {
@@ -139,28 +170,21 @@ export async function POST(request: Request) {
     const sourceOfIncomeToUse = lastApplication?.sourceOfIncome ?? "Employment"
     const maritalStatusToUse = lastApplication?.maritalStatus ?? "SINGLE"
 
+    // Identity documents are now optional - handled through requirement uploads per loan type
     const primaryIdUrlToUse =
       lastApplication?.primaryIdUrl ??
       lastApplication?.secondaryId1Url ??
       user.primaryIdUrl ??
-      user.secondaryIdUrl
+      user.secondaryIdUrl ??
+      null
     const secondaryId1UrlToUse =
-      lastApplication?.secondaryId1Url ?? user.secondaryIdUrl
+      lastApplication?.secondaryId1Url ?? user.secondaryIdUrl ?? null
     const secondaryId2UrlToUse = lastApplication?.secondaryId2Url ?? null
     const selfieWithIdUrlToUse =
       lastApplication?.selfieWithIdUrl ??
       user.selfieWithPrimaryIdUrl ??
-      user.selfieWithSecondaryIdUrl
-
-    if (!primaryIdUrlToUse || !selfieWithIdUrlToUse) {
-      return NextResponse.json(
-        {
-          error:
-            "Your identity documents are incomplete. Please update your registration/profile details before applying for a loan.",
-        },
-        { status: 400 }
-      )
-    }
+      user.selfieWithSecondaryIdUrl ??
+      null
 
     // Create application using stored borrower information
     const application = await prisma.loanApplication.create({
@@ -187,6 +211,18 @@ export async function POST(request: Request) {
         loanType: true
       }
     })
+
+    // Create requirement uploads
+    if (requirementUploads && Array.isArray(requirementUploads) && requirementUploads.length > 0) {
+      await prisma.applicationRequirementUpload.createMany({
+        data: requirementUploads.map((upload: any) => ({
+          applicationId: application.id,
+          requirementId: upload.requirementId,
+          documentUrl: upload.documentUrl,
+          selfieUrl: upload.selfieUrl,
+        })),
+      })
+    }
 
     // Create notification for admins/loan officers
     try {

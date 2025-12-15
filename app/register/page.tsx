@@ -4,16 +4,8 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { FileUpload } from "@/components/file-upload"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Info } from "lucide-react"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import {
   Dialog,
   DialogContent,
@@ -57,16 +49,6 @@ export default function RegisterPage() {
   const [yearsOfEmployment, setYearsOfEmployment] = useState("")
   const [maritalStatus, setMaritalStatus] = useState<"SINGLE" | "MARRIED" | "WIDOWED" | "DIVORCED">("SINGLE")
   
-  // Documents
-  const [idCategory, setIdCategory] = useState<"PRIMARY" | "SECONDARY">("PRIMARY")
-  const [primaryIdType, setPrimaryIdType] = useState("")
-  const [secondaryIdType, setSecondaryIdType] = useState("")
-  const [primaryIdUrl, setPrimaryIdUrl] = useState("")
-  const [secondaryIdUrl, setSecondaryIdUrl] = useState("")
-  const [selfieWithPrimaryIdUrl, setSelfieWithPrimaryIdUrl] = useState("")
-  const [selfieWithSecondaryIdUrl, setSelfieWithSecondaryIdUrl] = useState("")
-  const [payslipUrl, setPayslipUrl] = useState("")
-  const [billingReceiptUrl, setBillingReceiptUrl] = useState("")
 
   // Contact Persons
   const [contactPersons, setContactPersons] = useState([
@@ -154,27 +136,17 @@ export default function RegisterPage() {
     }
 
     // Validate required fields
-    // Require basic info, one ID (based on chosen category), matching selfie, payslip, and bill
-    const hasPrimaryPair = !!primaryIdUrl && !!selfieWithPrimaryIdUrl
-    const hasSecondaryPair = !!secondaryIdUrl && !!selfieWithSecondaryIdUrl
-
     if (
       !firstName ||
       !lastName ||
       !email ||
       !password ||
-      !phone ||
-      !idCategory ||
-      (!primaryIdType && idCategory === "PRIMARY") ||
-      (!secondaryIdType && idCategory === "SECONDARY") ||
-      (!hasPrimaryPair && !hasSecondaryPair) ||
-      !payslipUrl ||
-      !billingReceiptUrl
+      !phone
     ) {
       toast({
         variant: "destructive",
         title: "Validation Error",
-        description: "Please fill in all required fields, upload your chosen ID and selfie, payslip, and electric/water bill.",
+        description: "Please fill in all required fields.",
       })
       return
     }
@@ -249,13 +221,6 @@ export default function RegisterPage() {
           yearsOfEmployment: yearsOfEmployment ? parseFloat(yearsOfEmployment) : null,
           maritalStatus,
           contactPersons,
-          payslipUrl,
-          billingReceiptUrl,
-          // Always send all ID fields; backend will accept whichever pair is filled
-          primaryIdUrl,
-          secondaryIdUrl,
-          selfieWithPrimaryIdUrl,
-          selfieWithSecondaryIdUrl,
           role: "BORROWER",
         }),
       })
@@ -735,212 +700,6 @@ export default function RegisterPage() {
                     </div>
                   </div>
                 ))}
-              </div>
-
-              {/* ID Documents */}
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold">Identity & Income Documents</h3>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Choose ID category */}
-                  <div className="space-y-2 col-span-2">
-                    <label className="text-sm font-medium">ID Category *</label>
-                    <select
-                      className="w-full mt-1 px-3 py-2 border rounded-md"
-                      value={idCategory}
-                      onChange={(e) => setIdCategory(e.target.value as "PRIMARY" | "SECONDARY")}
-                    >
-                      <option value="PRIMARY">Primary Government ID</option>
-                      <option value="SECONDARY">Secondary ID</option>
-                    </select>
-                  </div>
-
-                  {/* ID Type + upload (depends on category) */}
-                  {idCategory === "PRIMARY" ? (
-                    <>
-                      {/* Primary ID */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium">
-                            Primary Government ID *
-                          </label>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="size-4 text-muted-foreground cursor-help flex-shrink-0" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p className="font-semibold mb-1">Acceptable Primary IDs (Philippines):</p>
-                                <ul className="list-disc list-inside space-y-1 text-xs">
-                                  <li>Driver&apos;s License</li>
-                                  <li>Passport</li>
-                                  <li>SSS ID</li>
-                                  <li>PhilHealth ID</li>
-                                  <li>TIN ID</li>
-                                  <li>Postal ID</li>
-                                  <li>National ID (PhilID)</li>
-                                  <li>PRC ID</li>
-                                </ul>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        <select
-                          className="w-full mt-1 px-3 py-2 border rounded-md"
-                          value={primaryIdType}
-                          onChange={(e) => setPrimaryIdType(e.target.value)}
-                        >
-                          <option value="">Select primary ID type</option>
-                          <option value="DRIVERS_LICENSE">Driver's License</option>
-                          <option value="PASSPORT">Passport</option>
-                          <option value="SSS">SSS ID</option>
-                          <option value="PHILHEALTH">PhilHealth ID</option>
-                          <option value="TIN">TIN ID</option>
-                          <option value="POSTAL">Postal ID</option>
-                          <option value="NATIONAL_ID">National ID (PhilID)</option>
-                          <option value="PRC">PRC ID</option>
-                        </select>
-                        <FileUpload
-                          value={primaryIdUrl}
-                          onChange={setPrimaryIdUrl}
-                          accept="image/*,.pdf"
-                          required
-                        />
-                      </div>
-
-                      {/* Selfie with Primary ID */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium">
-                            Selfie with Primary ID *
-                          </label>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="size-4 text-muted-foreground cursor-help flex-shrink-0" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p>Please upload a photo of yourself holding your Primary ID clearly visible.</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        <FileUpload
-                          value={selfieWithPrimaryIdUrl}
-                          onChange={setSelfieWithPrimaryIdUrl}
-                          accept="image/*"
-                          required
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {/* Secondary ID */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium">
-                            Secondary ID *
-                          </label>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="size-4 text-muted-foreground cursor-help flex-shrink-0" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p className="font-semibold mb-1">Acceptable Secondary IDs (Philippines):</p>
-                                <ul className="list-disc list-inside space-y-1 text-xs">
-                                  <li>Barangay Certificate</li>
-                                  <li>Voter&apos;s ID</li>
-                                  <li>School ID</li>
-                                  <li>Company ID</li>
-                                  <li>Senior Citizen ID</li>
-                                  <li>PWD ID</li>
-                                  <li>NBI Clearance</li>
-                                  <li>Police Clearance</li>
-                                </ul>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        <select
-                          className="w-full mt-1 px-3 py-2 border rounded-md"
-                          value={secondaryIdType}
-                          onChange={(e) => setSecondaryIdType(e.target.value)}
-                        >
-                          <option value="">Select secondary ID type</option>
-                          <option value="BARANGAY_CERT">Barangay Certificate</option>
-                          <option value="VOTERS_ID">Voter's ID</option>
-                          <option value="SCHOOL_ID">School ID</option>
-                          <option value="COMPANY_ID">Company ID</option>
-                          <option value="SENIOR_ID">Senior Citizen ID</option>
-                          <option value="PWD_ID">PWD ID</option>
-                          <option value="NBI">NBI Clearance</option>
-                          <option value="POLICE_CLEARANCE">Police Clearance</option>
-                        </select>
-                        <FileUpload
-                          value={secondaryIdUrl}
-                          onChange={setSecondaryIdUrl}
-                          accept="image/*,.pdf"
-                          required
-                        />
-                      </div>
-
-                      {/* Selfie with Secondary ID */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium">
-                            Selfie with Secondary ID *
-                          </label>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="size-4 text-muted-foreground cursor-help flex-shrink-0" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p>Please upload a photo of yourself holding your Secondary ID clearly visible.</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        <FileUpload
-                          value={selfieWithSecondaryIdUrl}
-                          onChange={setSelfieWithSecondaryIdUrl}
-                          accept="image/*"
-                          required
-                        />
-                      </div>
-                    </>
-                  )}
-                  {/* Payslip */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium">
-                        Payslip *
-                      </label>
-                    </div>
-                    <FileUpload
-                      value={payslipUrl}
-                      onChange={setPayslipUrl}
-                      accept="image/*,.pdf"
-                      required
-                    />
-                  </div>
-
-                  {/* Electric/Water Bill */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium">
-                        Electric/Water Bill *
-                      </label>
-                    </div>
-                    <FileUpload
-                      value={billingReceiptUrl}
-                      onChange={setBillingReceiptUrl}
-                      accept="image/*,.pdf"
-                      required
-                    />
-                  </div>
-                </div>
               </div>
 
               {/* Account Information */}

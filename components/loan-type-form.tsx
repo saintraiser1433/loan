@@ -14,6 +14,15 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 
+interface Requirement {
+  id: string
+  name: string
+  description: string | null
+  parentId: string | null
+  parent: Requirement | null
+  children: Requirement[]
+}
+
 interface LoanTypeFormProps {
   loanType?: {
     id: string
@@ -27,6 +36,7 @@ interface LoanTypeFormProps {
     latePaymentPenaltyPerDay?: number
     allowedMonthsToPay: string | null
     interestRatesByMonth: string | null
+    requirements?: { requirementId: string }[]
   } | null
   onSuccess?: () => void
 }
@@ -69,6 +79,11 @@ export function LoanTypeForm({ loanType, onSuccess }: LoanTypeFormProps) {
     }
     return {}
   })
+  const [requirements, setRequirements] = useState<Requirement[]>([])
+  const [selectedRequirementIds, setSelectedRequirementIds] = useState<string[]>(() => {
+    return loanType?.requirements?.map(r => r.requirementId) || []
+  })
+  const [loadingRequirements, setLoadingRequirements] = useState(false)
   const { toast } = useToast()
 
   const monthOptions = Array.from({ length: 60 }, (_, index) => index + 1)
@@ -98,6 +113,25 @@ export function LoanTypeForm({ loanType, onSuccess }: LoanTypeFormProps) {
   }
 
   useEffect(() => {
+    // Fetch requirements
+    const fetchRequirements = async () => {
+      setLoadingRequirements(true)
+      try {
+        const res = await fetch("/api/requirements")
+        if (res.ok) {
+          const data = await res.json()
+          setRequirements(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch requirements:", error)
+      } finally {
+        setLoadingRequirements(false)
+      }
+    }
+    fetchRequirements()
+  }, [])
+
+  useEffect(() => {
     if (!loanType) {
       return
     }
@@ -110,6 +144,7 @@ export function LoanTypeForm({ loanType, onSuccess }: LoanTypeFormProps) {
     setCreditScoreOnCompletion(loanType.creditScoreOnCompletion?.toString() || "5")
     setLimitIncreaseOnCompletion(loanType.limitIncreaseOnCompletion?.toString() || "0")
     setLatePaymentPenaltyPerDay(loanType.latePaymentPenaltyPerDay?.toString() || "0")
+    setSelectedRequirementIds(loanType.requirements?.map(r => r.requirementId) || [])
 
     if (loanType.allowedMonthsToPay) {
       try {
@@ -266,6 +301,7 @@ export function LoanTypeForm({ loanType, onSuccess }: LoanTypeFormProps) {
             selectedMonths.map((month) => [month, Number(interestRatesByMonth[month])])
           )
         ),
+        requirementIds: selectedRequirementIds,
       }
 
       const response = await fetch(
@@ -401,6 +437,92 @@ export function LoanTypeForm({ loanType, onSuccess }: LoanTypeFormProps) {
             required
           />
         </div>
+      </div>
+
+      <div className="space-y-3">
+        <label className="text-sm font-medium">Required Documents</label>
+        <p className="text-xs text-muted-foreground">
+          Select the requirements that borrowers must upload when applying for this loan type.
+        </p>
+        {loadingRequirements ? (
+          <div className="text-sm text-muted-foreground">Loading requirements...</div>
+        ) : (
+          <div className="max-h-60 space-y-2 overflow-y-auto rounded-md border p-4">
+            {requirements.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No requirements available. Create requirements first.</p>
+            ) : (
+              requirements
+                .filter((req) => !req.parentId) // Only show parent requirements
+                .map((req) => {
+                  const allChildren = req.children || []
+                  const allRequirementIds = [req.id, ...allChildren.map((c) => c.id)]
+                  const allSelected = allRequirementIds.every((id) => selectedRequirementIds.includes(id))
+                  const someSelected = allRequirementIds.some((id) => selectedRequirementIds.includes(id))
+
+                  return (
+                    <div key={req.id} className="space-y-2">
+                      <label className="flex items-center space-x-2 text-sm">
+                        <Checkbox
+                          checked={allSelected}
+                          ref={(el) => {
+                            if (el) {
+                              el.indeterminate = someSelected && !allSelected
+                            }
+                          }}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              // Select parent and all children
+                              setSelectedRequirementIds((prev) => {
+                                const newIds = [...prev]
+                                allRequirementIds.forEach((id) => {
+                                  if (!newIds.includes(id)) {
+                                    newIds.push(id)
+                                  }
+                                })
+                                return newIds
+                              })
+                            } else {
+                              // Deselect parent and all children
+                              setSelectedRequirementIds((prev) =>
+                                prev.filter((id) => !allRequirementIds.includes(id))
+                              )
+                            }
+                          }}
+                        />
+                        <span className="font-medium">{req.name}</span>
+                        {allChildren.length > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            ({allChildren.length} {allChildren.length === 1 ? "option" : "options"})
+                          </span>
+                        )}
+                      </label>
+                      {allChildren.length > 0 && (
+                        <div className="ml-6 space-y-1">
+                          {allChildren.map((child) => (
+                            <label key={child.id} className="flex items-center space-x-2 text-sm text-muted-foreground">
+                              <Checkbox
+                                checked={selectedRequirementIds.includes(child.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedRequirementIds((prev) =>
+                                      prev.includes(child.id) ? prev : [...prev, child.id]
+                                    )
+                                  } else {
+                                    setSelectedRequirementIds((prev) => prev.filter((id) => id !== child.id))
+                                  }
+                                }}
+                              />
+                              <span>{child.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
+            )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-3">

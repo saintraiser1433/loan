@@ -78,6 +78,7 @@ model LoanType {
   updatedAt                 DateTime @updatedAt
   applications              LoanApplication[]
   loans                     Loan[]
+  requirements              LoanTypeRequirement[]
 
   @@map("loan_types")
 }
@@ -129,10 +130,10 @@ model LoanApplication {
   maritalStatus      MaritalStatus
   payslipUrl         String?
   billingReceiptUrl  String?
-  primaryIdUrl       String
+  primaryIdUrl       String?
   secondaryId1Url    String?
   secondaryId2Url    String?
-  selfieWithIdUrl    String
+  selfieWithIdUrl    String?
   requestedAmount    Float
   approvedAmount     Float?
   purposeDescription String?
@@ -150,6 +151,7 @@ model LoanApplication {
   purpose            LoanPurpose       @relation(fields: [purposeId], references: [id])
   user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   loan               Loan?
+  requirementUploads ApplicationRequirementUpload[]
 
   @@map("loan_applications")
 }
@@ -274,11 +276,40 @@ model Requirement {
   parentId    String?
   parent      Requirement?  @relation("RequirementChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children    Requirement[] @relation("RequirementChildren")
+  loanTypes   LoanTypeRequirement[]
+  uploads     ApplicationRequirementUpload[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   @@unique([name, parentId])
   @@map("requirements")
+}
+
+model LoanTypeRequirement {
+  id           String      @id @default(cuid())
+  loanTypeId   String
+  requirementId String
+  createdAt    DateTime    @default(now())
+  loanType     LoanType    @relation(fields: [loanTypeId], references: [id], onDelete: Cascade)
+  requirement  Requirement  @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@unique([loanTypeId, requirementId])
+  @@map("loan_type_requirements")
+}
+
+model ApplicationRequirementUpload {
+  id             String          @id @default(cuid())
+  applicationId  String
+  requirementId  String
+  documentUrl    String          // The requirement document
+  selfieUrl      String          // Selfie with the requirement document
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  application    LoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  requirement    Requirement     @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, requirementId])
+  @@map("application_requirement_uploads")
 }
 
 model ActivityLog {

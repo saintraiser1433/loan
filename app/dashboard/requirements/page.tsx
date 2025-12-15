@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { redirect } from "next/navigation"
 import { Plus, Pencil, Trash2, ChevronRight, ChevronDown } from "lucide-react"
@@ -117,12 +117,20 @@ export default function RequirementsPage() {
     }
     setSaving(true)
     try {
+      // Normalize parentId: empty string, "__none__", or falsy should be null
+      const normalizedParentId = parentId && parentId !== "__none__" && parentId.trim() !== "" 
+        ? parentId.trim() 
+        : null
+
       const payload = {
         name: name.trim(),
         description: description.trim() || null,
         isActive,
-        parentId: parentId || null,
+        parentId: normalizedParentId,
       }
+      
+      console.log("Sending payload:", payload) // Debug log
+      
       const url = editing ? `/api/requirements/${editing.id}` : "/api/requirements"
       const method = editing ? "PUT" : "POST"
       const res = await fetch(url, {
@@ -130,15 +138,27 @@ export default function RequirementsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
-      const data = await res.json().catch(() => ({}))
+      
+      let data: any = {}
+      try {
+        const text = await res.text()
+        data = text ? JSON.parse(text) : {}
+      } catch (parseError) {
+        console.error("Failed to parse response:", parseError)
+        data = { error: "Invalid response from server" }
+      }
+      
       if (!res.ok) {
-        throw new Error(data.error || "Failed to save requirement")
+        console.error("API Error:", data) // Debug log
+        const errorMessage = data?.error || data?.details || data?.message || `Failed to save requirement (${res.status})`
+        throw new Error(errorMessage)
       }
       toast({ title: editing ? "Requirement updated" : "Requirement added" })
       setDialogOpen(false)
       resetForm()
       fetchRequirements()
     } catch (error: any) {
+      console.error("Save error:", error) // Debug log
       toast({
         variant: "destructive",
         title: "Error",
@@ -200,70 +220,76 @@ export default function RequirementsPage() {
     return parentRequirements.filter((r) => !excludeIds.has(r.id))
   }
 
-  const renderRequirementRow = (req: Requirement, level: number = 0) => {
+  const renderRequirementRow = (req: Requirement, level: number = 0): React.ReactNode[] => {
     const hasChildren = req.children && req.children.length > 0
     const isExpanded = expandedParents.has(req.id)
     const indent = level * 24
 
-    return (
-      <>
-        <tr key={req.id} className="border-b last:border-b-0">
-          <td className="px-4 py-3">
-            <div className="flex items-center gap-2" style={{ paddingLeft: `${indent}px` }}>
-              {hasChildren ? (
-                <button
-                  onClick={() => toggleExpand(req.id)}
-                  className="p-0.5 hover:bg-muted rounded"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </button>
-              ) : (
-                <span className="w-5" />
-              )}
-              <span className="font-medium">{req.name}</span>
-              {hasChildren && (
-                <Badge variant="outline" className="ml-2 text-xs">
-                  {req.children.length} {req.children.length === 1 ? "child" : "children"}
-                </Badge>
-              )}
-            </div>
-          </td>
-          <td className="px-4 py-3 text-muted-foreground">
-            {req.description || "-"}
-          </td>
-          <td className="px-4 py-3">
-            <Badge variant={req.isActive ? "default" : "secondary"}>
-              {req.isActive ? "Active" : "Inactive"}
-            </Badge>
-          </td>
-          <td className="px-4 py-3">
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openEdit(req)}
+    const rows: React.ReactNode[] = [
+      <tr key={req.id} className="border-b last:border-b-0">
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2" style={{ paddingLeft: `${indent}px` }}>
+            {hasChildren ? (
+              <button
+                onClick={() => toggleExpand(req.id)}
+                className="p-0.5 hover:bg-muted rounded"
               >
-                <Pencil className="h-4 w-4 mr-1" />
-                Edit
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleDelete(req.id)}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Delete
-              </Button>
-            </div>
-          </td>
-        </tr>
-        {hasChildren && isExpanded && req.children?.map((child) => renderRequirementRow(child, level + 1))}
-      </>
-    )
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+            ) : (
+              <span className="w-5" />
+            )}
+            <span className="font-medium">{req.name}</span>
+            {hasChildren && (
+              <Badge variant="outline" className="ml-2 text-xs">
+                {req.children.length} {req.children.length === 1 ? "child" : "children"}
+              </Badge>
+            )}
+          </div>
+        </td>
+        <td className="px-4 py-3 text-muted-foreground">
+          {req.description || "-"}
+        </td>
+        <td className="px-4 py-3">
+          <Badge variant={req.isActive ? "default" : "secondary"}>
+            {req.isActive ? "Active" : "Inactive"}
+          </Badge>
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openEdit(req)}
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleDelete(req.id)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+          </div>
+        </td>
+      </tr>
+    ]
+
+    // Add children rows if expanded
+    if (hasChildren && isExpanded && req.children) {
+      req.children.forEach((child) => {
+        rows.push(...renderRequirementRow(child, level + 1))
+      })
+    }
+
+    return rows
   }
 
   if (status === "loading" || loading) {
@@ -309,7 +335,7 @@ export default function RequirementsPage() {
                     </td>
                   </tr>
                 ) : (
-                  parentRequirements.map((req) => renderRequirementRow(req, 0))
+                  parentRequirements.flatMap((req) => renderRequirementRow(req, 0))
                 )}
               </tbody>
             </table>
@@ -337,12 +363,15 @@ export default function RequirementsPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Parent (Optional)</label>
-                <Select value={parentId} onValueChange={setParentId}>
+                <Select 
+                  value={parentId || "__none__"} 
+                  onValueChange={(value) => setParentId(value === "__none__" ? "" : value)}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="None (Create as parent requirement)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None (Create as parent requirement)</SelectItem>
+                    <SelectItem value="__none__">None (Create as parent requirement)</SelectItem>
                     {getAvailableParents().map((req) => (
                       <SelectItem key={req.id} value={req.id}>
                         {req.name}

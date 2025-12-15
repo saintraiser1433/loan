@@ -66,22 +66,7 @@ export async function POST(request: Request) {
       phone = phoneValidation.formatted
     }
 
-    const hasPrimaryPair = primaryIdUrl && selfieWithPrimaryIdUrl
-    const hasSecondaryPair = secondaryIdUrl && selfieWithSecondaryIdUrl
-
-    if (
-      role === "BORROWER" &&
-      (
-        (!hasPrimaryPair && !hasSecondaryPair) ||
-        !payslipUrl ||
-        !billingReceiptUrl
-      )
-    ) {
-      return NextResponse.json(
-        { error: "At least one valid ID with selfie plus payslip and electric/water bill are required for borrower registration" },
-        { status: 400 }
-      )
-    }
+    // Documents are now optional during registration - can be uploaded later in profile or during loan application
 
     const existingUser = await prisma.user.findUnique({
       where: { email }

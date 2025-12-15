@@ -22,28 +22,77 @@ export async function GET() {
         )
       }
 
+      try {
+        const loanTypes = await prisma.loanType.findMany({
+          where: {
+            creditScoreRequired: {
+              lte: user.creditScore // Only show loan types where required score <= user's score
+            }
+          },
+          include: {
+            requirements: {
+              include: {
+                requirement: true,
+              },
+            },
+          },
+          orderBy: { name: "asc" }
+        })
+
+        return NextResponse.json({ loanTypes })
+      } catch (includeError: any) {
+        // If requirements relation doesn't exist yet, fetch without it
+        if (includeError?.message?.includes("Unknown arg") || includeError?.code === "P2009") {
+          const loanTypes = await prisma.loanType.findMany({
+            where: {
+              creditScoreRequired: {
+                lte: user.creditScore
+              }
+            },
+            orderBy: { name: "asc" }
+          })
+          return NextResponse.json({ loanTypes })
+        }
+        throw includeError
+      }
+    }
+
+    // For admins and loan officers, show all loan types
+    try {
       const loanTypes = await prisma.loanType.findMany({
-        where: {
-          creditScoreRequired: {
-            lte: user.creditScore // Only show loan types where required score <= user's score
-          }
+        include: {
+          requirements: {
+            include: {
+              requirement: true,
+            },
+          },
         },
         orderBy: { name: "asc" }
       })
 
       return NextResponse.json({ loanTypes })
+    } catch (includeError: any) {
+      // If requirements relation doesn't exist yet, fetch without it
+      if (includeError?.message?.includes("Unknown arg") || includeError?.code === "P2009") {
+        const loanTypes = await prisma.loanType.findMany({
+          orderBy: { name: "asc" }
+        })
+        return NextResponse.json({ loanTypes })
+      }
+      throw includeError
     }
-
-    // For admins and loan officers, show all loan types
-    const loanTypes = await prisma.loanType.findMany({
-      orderBy: { name: "asc" }
-    })
-
-    return NextResponse.json({ loanTypes })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching loan types:", error)
+    console.error("Error details:", {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+    })
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        error: "Internal server error",
+        details: process.env.NODE_ENV === "development" ? error?.message : undefined
+      },
       { status: 500 }
     )
   }
@@ -61,7 +110,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, description, minAmount, maxAmount, creditScoreRequired, creditScoreOnCompletion, limitIncreaseOnCompletion, latePaymentPenaltyPerDay, allowedMonthsToPay, interestRatesByMonth } = body
+    const { name, description, minAmount, maxAmount, creditScoreRequired, creditScoreOnCompletion, limitIncreaseOnCompletion, latePaymentPenaltyPerDay, allowedMonthsToPay, interestRatesByMonth, requirementIds } = body
 
     // Check for required fields, allowing 0 values
     if (!name || maxAmount === undefined || maxAmount === null || maxAmount === "" || creditScoreRequired === undefined || creditScoreRequired === null || creditScoreRequired === "") {
@@ -226,8 +275,22 @@ export async function POST(request: Request) {
         limitIncreaseOnCompletion: limitIncreaseOnCompletionValue,
         latePaymentPenaltyPerDay: latePaymentPenaltyValue,
         allowedMonthsToPay: monthsToPay,
-        interestRatesByMonth: ratesByMonth
-      }
+        interestRatesByMonth: ratesByMonth,
+        requirements: requirementIds && Array.isArray(requirementIds) && requirementIds.length > 0
+          ? {
+              create: requirementIds.map((reqId: string) => ({
+                requirementId: reqId,
+              })),
+            }
+          : undefined,
+      },
+      include: {
+        requirements: {
+          include: {
+            requirement: true,
+          },
+        },
+      },
     })
 
     // Log activity

@@ -28,9 +28,22 @@ export default async function MyApplicationDetailPage({
     where: { id },
     include: {
       user: true,
-      loanType: true,
+      loanType: {
+        include: {
+          requirements: {
+            include: {
+              requirement: true,
+            },
+          },
+        },
+      },
       purpose: true,
       paymentDuration: true,
+      requirementUploads: {
+        include: {
+          requirement: true,
+        },
+      },
     }
   })
 
@@ -150,92 +163,141 @@ export default async function MyApplicationDetailPage({
             </CardContent>
           </Card>
 
-          {/* Documents */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Submitted Documents</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {application.primaryIdUrl && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Primary ID</div>
-                  <a 
-                    href={application.primaryIdUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline font-medium"
-                  >
-                    View Document →
-                  </a>
+          {/* Required Documents */}
+          {application.requirementUploads && application.requirementUploads.length > 0 && (
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Submitted Required Documents</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {application.requirementUploads.map((upload) => (
+                    <div key={upload.id} className="space-y-3 p-4 rounded-lg border">
+                      <div>
+                        <h3 className="font-medium">{upload.requirement.name}</h3>
+                        {upload.requirement.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{upload.requirement.description}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Document</div>
+                          <a 
+                            href={upload.documentUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline text-sm font-medium"
+                          >
+                            View Document →
+                          </a>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Selfie with Document</div>
+                          <a 
+                            href={upload.selfieUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline text-sm font-medium"
+                          >
+                            View Selfie →
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-              {application.secondaryId1Url && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Secondary ID 1</div>
-                  <a 
-                    href={application.secondaryId1Url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline font-medium"
-                  >
-                    View Document →
-                  </a>
-                </div>
-              )}
-              {application.secondaryId2Url && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Secondary ID 2</div>
-                  <a 
-                    href={application.secondaryId2Url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline font-medium"
-                  >
-                    View Document →
-                  </a>
-                </div>
-              )}
-              {application.selfieWithIdUrl && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Selfie with ID</div>
-                  <a 
-                    href={application.selfieWithIdUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline font-medium"
-                  >
-                    View Document →
-                  </a>
-                </div>
-              )}
-              {application.payslipUrl && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Payslip</div>
-                  <a 
-                    href={application.payslipUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline font-medium"
-                  >
-                    View Document →
-                  </a>
-                </div>
-              )}
-              {application.billingReceiptUrl && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Latest Billing Receipt</div>
-                  <a 
-                    href={application.billingReceiptUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline font-medium"
-                  >
-                    View Document →
-                  </a>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Legacy Documents (if any) */}
+          {(application.primaryIdUrl || application.secondaryId1Url || application.selfieWithIdUrl || application.payslipUrl || application.billingReceiptUrl) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Additional Documents</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {application.primaryIdUrl && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Primary ID</div>
+                    <a 
+                      href={application.primaryIdUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-medium"
+                    >
+                      View Document →
+                    </a>
+                  </div>
+                )}
+                {application.secondaryId1Url && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Secondary ID 1</div>
+                    <a 
+                      href={application.secondaryId1Url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-medium"
+                    >
+                      View Document →
+                    </a>
+                  </div>
+                )}
+                {application.secondaryId2Url && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Secondary ID 2</div>
+                    <a 
+                      href={application.secondaryId2Url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-medium"
+                    >
+                      View Document →
+                    </a>
+                  </div>
+                )}
+                {application.selfieWithIdUrl && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Selfie with ID</div>
+                    <a 
+                      href={application.selfieWithIdUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-medium"
+                    >
+                      View Document →
+                    </a>
+                  </div>
+                )}
+                {application.payslipUrl && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Payslip</div>
+                    <a 
+                      href={application.payslipUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-medium"
+                    >
+                      View Document →
+                    </a>
+                  </div>
+                )}
+                {application.billingReceiptUrl && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Latest Billing Receipt</div>
+                    <a 
+                      href={application.billingReceiptUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-medium"
+                    >
+                      View Document →
+                    </a>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Contact Persons */}
           {contactPersons.length > 0 && (
@@ -257,6 +319,31 @@ export default async function MyApplicationDetailPage({
             </Card>
           )}
         </div>
+
+        {/* Re-apply button for rejected applications */}
+        {application.status === "REJECTED" && (
+          <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950 dark:border-orange-900">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                    Application Rejected
+                  </h3>
+                  <p className="text-orange-800 dark:text-orange-200">
+                    Your application was rejected. You can apply again with the same or a different loan type.
+                  </p>
+                </div>
+                <Link href={`/dashboard/apply/form?loanTypeId=${application.loanTypeId}`}>
+                  <Button
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                  >
+                    Re-apply for Loan
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   )

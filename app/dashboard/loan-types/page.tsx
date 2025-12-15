@@ -38,6 +38,7 @@ interface LoanType {
   interestRatesByMonth: string | null // JSON object string
   createdAt: Date
   updatedAt: Date
+  requirements?: { requirementId: string; requirement: { id: string; name: string } }[]
 }
 
 export default function LoanTypesPage() {

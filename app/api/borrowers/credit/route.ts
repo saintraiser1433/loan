@@ -47,7 +47,7 @@ export async function GET() {
       }
     })
 
-    // Check for pending applications
+    // Check for pending applications (only PENDING status blocks re-application, REJECTED allows re-application)
     const pendingApplications = await prisma.loanApplication.count({
       where: {
         userId: session.user.id,
@@ -68,7 +68,7 @@ export async function GET() {
       availableCredit: Math.max(0, availableCredit), // Ensure it's not negative
       hasPendingApplication: pendingApplications > 0,
       hasActiveLoan: activeLoans.length > 0,
-      canApply: pendingApplications === 0 && activeLoans.length === 0,
+      canApply: pendingApplications === 0 && activeLoans.length === 0, // REJECTED applications don't block re-application
     })
   } catch (error) {
     console.error("Error fetching borrower credit:", error)

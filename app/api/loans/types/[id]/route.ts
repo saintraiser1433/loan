@@ -20,7 +20,7 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json()
-    const { name, description, minAmount, maxAmount, creditScoreRequired, creditScoreOnCompletion, limitIncreaseOnCompletion, latePaymentPenaltyPerDay, allowedMonthsToPay, interestRatesByMonth } = body
+    const { name, description, minAmount, maxAmount, creditScoreRequired, creditScoreOnCompletion, limitIncreaseOnCompletion, latePaymentPenaltyPerDay, allowedMonthsToPay, interestRatesByMonth, requirementIds } = body
 
     // Check for required fields, allowing 0 values
     if (!name || maxAmount === undefined || maxAmount === null || maxAmount === "" || creditScoreRequired === undefined || creditScoreRequired === null || creditScoreRequired === "") {
@@ -194,6 +194,24 @@ export async function PUT(
       )
     }
 
+    // Handle requirements update
+    if (requirementIds !== undefined) {
+      // Delete existing requirements
+      await prisma.loanTypeRequirement.deleteMany({
+        where: { loanTypeId: id },
+      })
+
+      // Create new requirements if provided
+      if (Array.isArray(requirementIds) && requirementIds.length > 0) {
+        await prisma.loanTypeRequirement.createMany({
+          data: requirementIds.map((reqId: string) => ({
+            loanTypeId: id,
+            requirementId: reqId,
+          })),
+        })
+      }
+    }
+
     const loanType = await prisma.loanType.update({
       where: { id },
       data: {
@@ -207,7 +225,14 @@ export async function PUT(
         latePaymentPenaltyPerDay: latePaymentPenaltyValue,
         allowedMonthsToPay: monthsToPay,
         interestRatesByMonth: ratesByMonth
-      }
+      },
+      include: {
+        requirements: {
+          include: {
+            requirement: true,
+          },
+        },
+      },
     })
 
     // Log activity

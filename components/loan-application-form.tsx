@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
+import { FileUpload } from "@/components/file-upload"
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -16,6 +17,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
+interface Requirement {
+  id: string
+  name: string
+  description: string | null
+  parentId: string | null
+  children?: Requirement[]
+}
+
 interface LoanType {
   id: string
   name: string
@@ -25,6 +34,7 @@ interface LoanType {
   creditScoreRequired: number
   allowedMonthsToPay: string | null
   interestRatesByMonth: string | null
+  requirements?: { requirementId: string; requirement: Requirement }[]
 }
 
 interface Purpose {
@@ -52,6 +62,7 @@ export function LoanApplicationForm({ initialLoanTypeId }: LoanApplicationFormPr
   const [paymentDurationId, setPaymentDurationId] = useState("")
   const [requestedAmount, setRequestedAmount] = useState("")
   const [purposeDescription, setPurposeDescription] = useState("")
+  const [requirementUploads, setRequirementUploads] = useState<Record<string, { documentUrl: string; selfieUrl: string }>>({})
 
   const [loanTypes, setLoanTypes] = useState<LoanType[]>([])
   const [purposes, setPurposes] = useState<Purpose[]>([])
@@ -154,6 +165,16 @@ export function LoanApplicationForm({ initialLoanTypeId }: LoanApplicationFormPr
       }
     }
 
+    // Validate requirement uploads
+    if (selectedLoanType?.requirements && selectedLoanType.requirements.length > 0) {
+      for (const req of selectedLoanType.requirements) {
+        const upload = requirementUploads[req.requirementId]
+        if (!upload || !upload.documentUrl || !upload.selfieUrl) {
+          nextErrors[`requirement_${req.requirementId}`] = `Please upload ${req.requirement.name} document and selfie`
+        }
+      }
+    }
+
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
   }
@@ -175,6 +196,15 @@ export function LoanApplicationForm({ initialLoanTypeId }: LoanApplicationFormPr
     setShowConfirmDialog(false)
     setLoading(true)
     try {
+      // Prepare requirement uploads
+      const requirementUploadsArray = selectedLoanType?.requirements
+        ? selectedLoanType.requirements.map((req) => ({
+            requirementId: req.requirementId,
+            documentUrl: requirementUploads[req.requirementId]?.documentUrl || "",
+            selfieUrl: requirementUploads[req.requirementId]?.selfieUrl || "",
+          }))
+        : []
+
       const response = await fetch("/api/loans/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -184,6 +214,7 @@ export function LoanApplicationForm({ initialLoanTypeId }: LoanApplicationFormPr
           paymentDurationId,
           requestedAmount: Number(requestedAmount),
           purposeDescription: purposeDescription || null,
+          requirementUploads: requirementUploadsArray,
         }),
       })
       if (!response.ok) {
@@ -337,8 +368,70 @@ export function LoanApplicationForm({ initialLoanTypeId }: LoanApplicationFormPr
         </div>
       </div>
 
-      {/* Employment, documents, and contact persons are now taken from registration/profile
-          and most recent application; no need to show them on this form. */}
+      {/* Required Documents */}
+      {selectedLoanType?.requirements && selectedLoanType.requirements.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Required Documents</h3>
+          <p className="text-sm text-muted-foreground">
+            Please upload each required document along with a selfie holding the document.
+          </p>
+          <div className="space-y-6">
+            {selectedLoanType.requirements.map((req) => {
+              const upload = requirementUploads[req.requirementId] || { documentUrl: "", selfieUrl: "" }
+              const errorKey = `requirement_${req.requirementId}`
+              return (
+                <div key={req.requirementId} className="space-y-4 rounded-lg border p-4">
+                  <div>
+                    <h4 className="font-medium">{req.requirement.name}</h4>
+                    {req.requirement.description && (
+                      <p className="text-sm text-muted-foreground">{req.requirement.description}</p>
+                    )}
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Document *</label>
+                      <FileUpload
+                        value={upload.documentUrl}
+                        onChange={(url) => {
+                          setRequirementUploads((prev) => ({
+                            ...prev,
+                            [req.requirementId]: {
+                              ...prev[req.requirementId],
+                              documentUrl: url,
+                            },
+                          }))
+                        }}
+                        accept="image/*,.pdf"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Selfie with Document *</label>
+                      <FileUpload
+                        value={upload.selfieUrl}
+                        onChange={(url) => {
+                          setRequirementUploads((prev) => ({
+                            ...prev,
+                            [req.requirementId]: {
+                              ...prev[req.requirementId],
+                              selfieUrl: url,
+                            },
+                          }))
+                        }}
+                        accept="image/*"
+                        required
+                      />
+                    </div>
+                  </div>
+                  {errors[errorKey] && (
+                    <p className="text-xs text-destructive">{errors[errorKey]}</p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <Button type="submit" disabled={loading} className="w-full">
         {loading ? "Submitting..." : "Submit Application"}

@@ -26,7 +26,7 @@ export default async function ApplyFormPage({
     redirect("/dashboard/apply")
   }
 
-  // Check for pending applications and active loans
+  // Check for pending applications and active loans (REJECTED applications don't block re-application)
   const [pendingApplications, activeLoans] = await Promise.all([
     prisma.loanApplication.count({
       where: {
@@ -42,7 +42,7 @@ export default async function ApplyFormPage({
     })
   ])
 
-  // Redirect if they have pending applications or active loans
+  // Redirect if they have pending applications or active loans (REJECTED status allows re-application)
   if (pendingApplications > 0 || activeLoans.length > 0) {
     redirect("/dashboard/apply")
   }

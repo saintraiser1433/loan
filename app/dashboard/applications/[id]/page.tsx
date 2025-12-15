@@ -28,9 +28,22 @@ export default async function ApplicationDetailPage({
     where: { id },
     include: {
       user: true,
-      loanType: true,
+      loanType: {
+        include: {
+          requirements: {
+            include: {
+              requirement: true,
+            },
+          },
+        },
+      },
       purpose: true,
       paymentDuration: true,
+      requirementUploads: {
+        include: {
+          requirement: true,
+        },
+      },
     }
   })
 
@@ -136,60 +149,105 @@ export default async function ApplicationDetailPage({
             </div>
           </div>
 
-          {/* Documents */}
-          <div className="rounded-lg border bg-card p-6 space-y-4">
-            <h2 className="text-xl font-semibold">Documents</h2>
-            <div className="space-y-2">
-              {application.primaryIdUrl && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Primary ID</div>
-                  <a href={application.primaryIdUrl} target="_blank" className="text-primary hover:underline">
-                    View Document
-                  </a>
-                </div>
-              )}
-              {application.secondaryId1Url && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Secondary ID 1</div>
-                  <a href={application.secondaryId1Url} target="_blank" className="text-primary hover:underline">
-                    View Document
-                  </a>
-                </div>
-              )}
-              {application.secondaryId2Url && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Secondary ID 2</div>
-                  <a href={application.secondaryId2Url} target="_blank" className="text-primary hover:underline">
-                    View Document
-                  </a>
-                </div>
-              )}
-              {application.selfieWithIdUrl && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Selfie with ID</div>
-                  <a href={application.selfieWithIdUrl} target="_blank" className="text-primary hover:underline">
-                    View Document
-                  </a>
-                </div>
-              )}
-              {application.payslipUrl && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Payslip</div>
-                  <a href={application.payslipUrl} target="_blank" className="text-primary hover:underline">
-                    View Document
-                  </a>
-                </div>
-              )}
-              {application.billingReceiptUrl && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Billing Receipt</div>
-                  <a href={application.billingReceiptUrl} target="_blank" className="text-primary hover:underline">
-                    View Document
-                  </a>
-                </div>
-              )}
+          {/* Required Documents */}
+          {application.requirementUploads && application.requirementUploads.length > 0 && (
+            <div className="rounded-lg border bg-card p-6 space-y-4 md:col-span-2">
+              <h2 className="text-xl font-semibold">Submitted Required Documents</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {application.requirementUploads.map((upload) => (
+                  <div key={upload.id} className="space-y-2 p-4 rounded-lg border">
+                    <div>
+                      <h3 className="font-medium">{upload.requirement.name}</h3>
+                      {upload.requirement.description && (
+                        <p className="text-sm text-muted-foreground">{upload.requirement.description}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Document</div>
+                        <a 
+                          href={upload.documentUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline text-sm font-medium"
+                        >
+                          View Document →
+                        </a>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Selfie with Document</div>
+                        <a 
+                          href={upload.selfieUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline text-sm font-medium"
+                        >
+                          View Selfie →
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Legacy Documents (if any) */}
+          {(application.primaryIdUrl || application.secondaryId1Url || application.selfieWithIdUrl || application.payslipUrl || application.billingReceiptUrl) && (
+            <div className="rounded-lg border bg-card p-6 space-y-4">
+              <h2 className="text-xl font-semibold">Additional Documents</h2>
+              <div className="space-y-2">
+                {application.primaryIdUrl && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Primary ID</div>
+                    <a href={application.primaryIdUrl} target="_blank" className="text-primary hover:underline">
+                      View Document
+                    </a>
+                  </div>
+                )}
+                {application.secondaryId1Url && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Secondary ID 1</div>
+                    <a href={application.secondaryId1Url} target="_blank" className="text-primary hover:underline">
+                      View Document
+                    </a>
+                  </div>
+                )}
+                {application.secondaryId2Url && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Secondary ID 2</div>
+                    <a href={application.secondaryId2Url} target="_blank" className="text-primary hover:underline">
+                      View Document
+                    </a>
+                  </div>
+                )}
+                {application.selfieWithIdUrl && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Selfie with ID</div>
+                    <a href={application.selfieWithIdUrl} target="_blank" className="text-primary hover:underline">
+                      View Document
+                    </a>
+                  </div>
+                )}
+                {application.payslipUrl && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Payslip</div>
+                    <a href={application.payslipUrl} target="_blank" className="text-primary hover:underline">
+                      View Document
+                    </a>
+                  </div>
+                )}
+                {application.billingReceiptUrl && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Billing Receipt</div>
+                    <a href={application.billingReceiptUrl} target="_blank" className="text-primary hover:underline">
+                      View Document
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Contact Persons */}
           {contactPersons.length > 0 && (
